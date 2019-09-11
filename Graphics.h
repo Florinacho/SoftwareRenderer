@@ -22,10 +22,12 @@ struct PixelShaderData {
 	}
 };
 
-typedef void (*VertexShaderCallback)(VertexShaderData&);
-typedef void (*PixelShaderCallback)(PixelShaderData&);
+typedef void (*VertexShaderCallback)(VertexShaderData&, void*);
+typedef void (*PixelShaderCallback)(PixelShaderData&, void*);
 	
 class Graphics {
+	static const unsigned int MAX_BUFFER_COUNT = 1;		// Unused
+
 	FrameBuffer* frameBuffer;
 	const Image* activeTexture;
 
@@ -44,6 +46,7 @@ class Graphics {
 
 	VertexShaderCallback vertexShaderCallback;
 	PixelShaderCallback pixelShaderCallback;
+	void* shaderUniform;
 	
 public:
 	enum {
@@ -57,6 +60,8 @@ public:
 	
 	~Graphics();
 
+	// Supported color pixel depths: 16, 24, 32 (This also have to be 
+	// supported by the hardware.
 	bool initialize(FrameBuffer* frameBuffer, int depthBPP = 8);
 
 	void uninitialize();
@@ -79,6 +84,10 @@ public:
 	void setVertexShaderCallback(VertexShaderCallback callback);
 
 	void setPixelShaderCallback(PixelShaderCallback callback);
+
+	void setShaderUniform(void* data);
+
+	void* getShaderUniform() const;
 
 	void setActiveTexture(const Image* image = NULL);
 

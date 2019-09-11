@@ -7,66 +7,70 @@
 #include <sys/ioctl.h> // for ioctl
 
 #include "FrameBuffer.h"
+#include "Image.h"
 
-FrameBuffer::FrameBuffer() {
-	bpp = 0;
-	
-	buffer = NULL;
-	
-	fileDescriptor = -1;
+const char* const FrameBuffer::ErrorText[] = {
+	"No error",
+	"Cannot open file /dev/fb",
+	"Cannot read fix screen information",
+	"Cannot read variable screen information",
+	"Cannot write variable screen information",
+	"Cannot map memory"
+};
+
+FrameBuffer::FrameBuffer() 
+	: bpp(0), buffer(NULL), fileDescriptor(-1) {
 }
 	
 FrameBuffer::~FrameBuffer() {
 	uninitialize();
 }
 	
-bool FrameBuffer::initialize(int width, int height, int inbpp) {
-//	fb_var_screeninfo varInfo;
-//	fb_fix_screeninfo fixInfo;
-
+int FrameBuffer::initialize(int width, int height, int bitsPerPixel) {
 	uninitialize();
 	
-	fileDescriptor = open("/dev/fb0", O_RDWR);
+	fileDescriptor = open("/dev/fb0", O_RDWR, 777);
 	if (fileDescriptor == -1) {
-		printf("Error! Cannot open /dev/fb0\n");
-		return false;
+		return ERR_CANNOT_OPEN_FILE;
 	}
     
-	if (ioctl(fileDescriptor, FBIOGET_VSCREENINFO, &varInfo)) {
-		printf("Error! Cannot get the framebuffer variable infomation\n");
-		return false;
-	}
 	if (ioctl(fileDescriptor, FBIOGET_FSCREENINFO, &fixInfo)) {
-		printf("Error! Cannot get the framebuffer fixed information.\n");
-		return false;
+		return ERR_CANNOT_READ_FIX_INFO;
 	}
-/**/
+
+	if (ioctl(fileDescriptor, FBIOGET_VSCREENINFO, &varInfo)) {
+		return ERR_CANNOT_READ_VAR_INFO;
+	}
+
 	varInfo.xres = width;
 	varInfo.yres = height;
 	varInfo.xres_virtual = varInfo.xres;
 	varInfo.yres_virtual = varInfo.yres;
 
-	varInfo.bits_per_pixel = inbpp;
+	varInfo.bits_per_pixel = bitsPerPixel;
+
+	printf("fixInfo.mmio_len = %d\n", fixInfo.mmio_len);
+	if (fixInfo.mmio_len != 0) {
+		printf("Internal error! mmio_len = %d\n", fixInfo.mmio_len);
+	}
 	
-	if (ioctl(fileDescriptor, FBIOPUT_VSCREENINFO, &varInfo) == -1) {
-		printf("Warning! Cannot change the pixel format.\n");
+	if (ioctl(fileDescriptor, FBIOPUT_VSCREENINFO, &varInfo) != 0) {
+		return ERR_CANNOT_WRITE_VAR_INFO;
 	}
 
 	size.x = width;
 	size.y = height;
-	bpp = inbpp;
-/**/
-	printf("FrameBuffer: %dx%d (%dx%d virtual) %d bpp (%d smen_len)\n", 
-		varInfo.xres, varInfo.yres, 
-		varInfo.xres_virtual, varInfo.yres_virtual,
-		varInfo.bits_per_pixel,
-		fixInfo.smem_len);
+	bpp = bitsPerPixel;
 
-	buffer = (unsigned char*)mmap(0, fixInfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, fileDescriptor, 0);
+//	screenSize = varInfo.xres * varInfo.yres * (varInfo.bits_per_pixel >> 3);
+	screenSize = fixInfo.smem_len;
 
-	printf("FB: %d | %d\n", getBufferLength(), fixInfo.smem_len);
+	buffer = (unsigned char*)mmap(NULL, fixInfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, fileDescriptor, 0);
+	if (buffer == (void*)-1) {
+		return ERR_CANNOT_MAP_MEMORY;
+	}
 
-	return true;
+	return ERR_NO_ERROR;
 }
 
 void FrameBuffer::uninitialize() {
@@ -87,10 +91,32 @@ Vector2u FrameBuffer::getSize() const {
 	return size;
 }
 
-unsigned int FrameBuffer::getBPP() const {
+unsigned int FrameBuffer::getBitsPerPixel() const {
 	return bpp;
 }
-	
-unsigned int FrameBuffer::getBufferLength() const {
-	return size.x * size.y * bpp / 8;
+
+unsigned int FrameBuffer::getBytesPerPixel() const {
+	return getBitsPerPixel() / 8;
+}
+
+void FrameBuffer::draw(const Image* image) {
+	if (image == NULL) {
+		return;
+	}
+
+	if (size.x != image->getSize().x) {
+		return;
+	}
+	if (size.y != image->getSize().y) {
+		return;
+	}
+	if ((bpp / 8) != image->getPixelSize()) {
+		return;
+	}
+
+	const unsigned int visualLineLength = size.x * (bpp / 8);
+
+	for (unsigned int index = 0; index < size.y; ++index) {
+		memcpy(buffer + index * fixInfo.line_length, image->getData() + index * visualLineLength, visualLineLength);
+	}
 }

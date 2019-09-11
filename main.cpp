@@ -3,17 +3,22 @@
 #include "Graphics.h"
 #include "Matrix4.h"
 #include "CubeMesh.h"
+
+#define DEBUG_PRINT_FPS
+
+#if defined (DEBUG_PRINT_FPS)
 #include "Timer.h"
+#endif //DEBUG_PRINT_FPS
 
 const Vector2u screenSize(800, 600);
-static Matrix4f ModelViewProjection;
 
 struct Mesh3D {
 	Image* texture;
 
-	Matrix4f model;
-	Matrix4f view;
-	Matrix4f perspective;
+	mat4 model;
+	mat4 view;
+	mat4 perspective;
+	mat4 ModelViewProjection;
 
 	vec3 position;
 	vec3 rotation;
@@ -34,7 +39,7 @@ struct Mesh3D {
 		view.setTransformation(vec3( 0.0f, 0.0f, -100.0f), vec3(0.0f, 0.0f, 0.0f), vec3(1.0f, 1.0f, 1.0f));
 		view.invert();
 
-		// setPerspective(fovyDegrees, aspectRatio, zNeat, zFar); used for 3d scenes
+		// setPerspective(fovyDegrees, aspectRatio, zNear, zFar); used for 3d scenes
 		static float znear = 200.0f;
 		static float zfar = 0.1f;
 		perspective.setPerspective(60.0f, (float)screenSize.x / (float)screenSize.y, znear, zfar);
@@ -53,51 +58,67 @@ struct Mesh3D {
 		graphics->setDepthMask(true);
 		graphics->setAlphaBlend(alphaBlend);
 
+		graphics->setShaderUniform(&ModelViewProjection);
+
 		graphics->drawPrimitive(Graphics::EPT_TRIANGLES, CubeVertices, CubeVerticesCount);
 	}
 
-	static void VertexShader(VertexShaderData& data) {
-		data.position = ModelViewProjection * data.position;
+	static void VertexShader(VertexShaderData& vertex, void* uniform) {
+		if (uniform == NULL) {
+			return;
+		}
+		mat4 ModelViewProjection = *reinterpret_cast<mat4*>(uniform);
+		vertex.position = ModelViewProjection * vertex.position;
 	}
 
-	static void PixelShader(PixelShaderData& data) {
-		data.color = data.color * data.texture->getPixelByUV(data.uv);
+	static void PixelShader(PixelShaderData& pixel, void* uniform) {
+		pixel.color *= pixel.texture->getPixelByUV(pixel.uv);
 	}
 };
 
 int main() {
 	FrameBuffer frameBuffer;
-	if (frameBuffer.initialize(screenSize.x, screenSize.y, 24) == false) {
-		printf("Failed to initialize frame buffer.\n");
+	Graphics graphics;
+	Mesh3D mesh;
+	Image image;
+	int status;
+#if defined (DEBUG_PRINT_FPS)
+	unsigned int fps = 0;
+	unsigned long long lastPrintTime = 0;
+#endif //DEBUG_PRINT_FPS
+
+	status = frameBuffer.initialize(screenSize.x, screenSize.y, 32);
+	if (status != FrameBuffer::ERR_NO_ERROR) {
+		printf("Failed to initialize frame buffer.\nError: %s\n", FrameBuffer::ErrorText[status]);
 		return 1;
 	}
 	
-	Graphics graphics;
 	if (graphics.initialize(&frameBuffer) == false) {
 		printf("Failed to initialize graphics!\n");
 		return 2;
 	}
 
-	Image image;
 	if (image.load("tex_test.tga") == false) {
-		printf("Cannot load image.\n");
+		printf("Failed to load image.\n");
 		return 3;
 	}
 
-	Mesh3D mesh;
 	mesh.position = vec3(screenSize.x / 2, screenSize.y / 2, 0.0f);
 	mesh.texture = &image;
 
-	unsigned int fps = 0;
-	unsigned long long lastPrintTime = os::Timer::GetMilliSeconds();
+#if defined (DEBUG_PRINT_FPS)
+	lastPrintTime = os::Timer::GetMilliSeconds();
+#endif //DEBUG_PRINT_FPS
 
 	while (true) {
+#if defined (DEBUG_PRINT_FPS)
 		const unsigned long long currentTime = os::Timer::GetMilliSeconds();
 		if (currentTime - lastPrintTime >= 1000) {
 			printf("FPS: %d\n", fps);
 			fps = 0;
-			lastPrintTime = currentTime;
+			lastPrintTime += 1000;
 		}
+#endif //DEBUG_PRINT_FPS
 		graphics.clear();
 
 		// Draw background
@@ -114,7 +135,7 @@ int main() {
 
 		// Draw transparent rotating cube
 		mesh.alphaBlend = true;
-		mesh.rotation = mesh.rotation + vec3(0.33f, 0.66f, 1.0f);
+		mesh.rotation += vec3(0.33f, 0.66f, 1.0f);
 		mesh.draw(&graphics);
 
 		// Draw depth buffer

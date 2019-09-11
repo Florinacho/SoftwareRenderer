@@ -5,9 +5,9 @@
 //https://github.com/ssloy/tinyrenderer/wiki/Lesson-2:-Triangle-rasterization-and-back-face-culling
 //https://github.com/joshb/linedrawing/blob/master/Rasterizer.cpp
 
-void DefaultVertexShader2D(VertexShaderData& data) {
+void DefaultVertexShader2D(VertexShaderData& data, void* uniform) {
 }
-void DefaultPixelShader2D(PixelShaderData& data) {
+void DefaultPixelShader2D(PixelShaderData& data, void* uniform) {
 	data.color = data.color * data.texture->getPixelByUV(data.uv);
 }
 
@@ -128,9 +128,9 @@ void Graphics::drawTriangle(
 	vertex[2].color = c2;
 
 	if (vertexShaderCallback) {
-		vertexShaderCallback(vertex[0]);
-		vertexShaderCallback(vertex[1]);
-		vertexShaderCallback(vertex[2]);
+		vertexShaderCallback(vertex[0], shaderUniform);
+		vertexShaderCallback(vertex[1], shaderUniform);
+		vertexShaderCallback(vertex[2], shaderUniform);
 	} 
 
 	const Vector2u size = colorBuffer.getSize();
@@ -143,7 +143,7 @@ void Graphics::drawTriangle(
 
 	for (int j = minY; j <= maxY; ++j) {
 		for (int i = minX; i <= maxX; ++i) {
-			const Vector3f p(i + 0.5f, j + 0.5f, 0.0f);
+			const Vector3f p((float)i + 0.5f, (float)j + 0.5f, 0.0f);
 			Vector3f weight;
 			if ((weight.x = edgeFunction(vertex[1].position, vertex[2].position, p)) < 0.0f) {
 				continue;
@@ -174,7 +174,7 @@ void Graphics::drawTriangle(
 				pixelShaderData.uv = vertex[0].uv * weight.x + vertex[1].uv * weight.y + vertex[2].uv * weight.z;
 				pixelShaderData.color = vertex[0].color * weight.x + vertex[1].color * weight.y + vertex[2].color * weight.z;
 
-				pixelShaderCallback(pixelShaderData);
+				pixelShaderCallback(pixelShaderData, shaderUniform);
 			} 
 		
 			if (alphaBlend) {
@@ -197,6 +197,7 @@ Graphics::Graphics() {
 
 	vertexShaderCallback = NULL;
 	pixelShaderCallback = NULL;
+	shaderUniform = NULL;
 
 	depthTest = true;
 	depthMask = true;
@@ -213,14 +214,14 @@ bool Graphics::initialize(FrameBuffer* inframeBuffer, int depthBPP) {
 		return false;
 	}
 
-	switch (frameBuffer->getBPP()) {
-	case 16 :
+	switch (frameBuffer->getBytesPerPixel()) {
+	case 2 :
 		colorBuffer.create(frameBuffer->getSize(), Image::EPF_R5G6B5);
 		break;
-	case 24 :
+	case 3 :
 		colorBuffer.create(frameBuffer->getSize(), Image::EPF_R8G8B8);
 		break;
-	case 32 :
+	case 4 :
 		colorBuffer.create(frameBuffer->getSize(), Image::EPF_R8G8B8A8);
 		break;
 	default :
@@ -279,6 +280,10 @@ void Graphics::setVertexShaderCallback(VertexShaderCallback callback) {
 
 void Graphics::setPixelShaderCallback(PixelShaderCallback callback) {
 	pixelShaderCallback = callback;
+}
+
+void Graphics::setShaderUniform(void* uniform) {
+	shaderUniform = uniform;
 }
 
 void Graphics::setActiveTexture(const Image* texture) {
@@ -368,10 +373,6 @@ void Graphics::swap() {
 	if (frameBuffer == NULL) {
 		return;
 	}
-	
-	if (colorBuffer.getData() == NULL) {
-		return;
-	}
 
-	memcpy(frameBuffer->buffer, colorBuffer.getData(), colorBuffer.getDataSize());
+	frameBuffer->draw(&colorBuffer);
 }

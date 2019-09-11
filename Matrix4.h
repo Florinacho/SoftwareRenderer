@@ -445,4 +445,6 @@ typedef Matrix4<unsigned int> Matrix4ui;
 typedef Matrix4<float> Matrix4f;
 typedef Matrix4<double> Matrix4d;
 
+typedef Matrix4f mat4;
+
 #endif // __MATRIX_H__

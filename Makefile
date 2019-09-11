@@ -5,8 +5,9 @@ LIBS=-lm
 
 .PHONY: clean
 
-all: main.out
+build: main.out
 
+rebuild: clean build
 
 main.out: main.o FrameBuffer.o Image.o Graphics.o Timer.o
 	$(CC) $(FLAGS) FrameBuffer.o Image.o Graphics.o Timer.o main.o -o main.out $(LIBS)

@@ -70,6 +70,13 @@ struct Vector3 {
 		return Vector3<T>(x * value, y * value, z * value);
 	}
 
+	Vector3<T> operator += (const Vector3<T>& other) {
+		x += other.x;
+		y += other.y;
+		z += other.z;
+		return *this;
+	}
+
 	Vector3<T> operator /= (const T value) {
 		x /= value;
 		y /= value;
@@ -143,9 +150,17 @@ struct Vector4 {
 	
 	Vector4<T>& operator += (const Vector4<T>& other) {
 		x += other.x;
-		y +=other.y;
+		y += other.y;
 		z += other.z;
 		w += other.w;
+		return *this;
+	}
+
+	Vector4<T>& operator *= (const Vector4<T>& other) {
+		x *= other.x;
+		y *= other.y;
+		z *= other.z;
+		w *= other.w;
 		return *this;
 	}
 	
