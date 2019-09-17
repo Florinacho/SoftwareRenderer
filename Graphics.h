@@ -6,7 +6,7 @@
 #include "Image.h"
 
 struct VertexShaderData {
-	Vector3f position;
+	Vector4f position;
 	Vector2f uv;
 	Vector4f color;
 	int index;
@@ -47,6 +47,7 @@ class Graphics {
 	VertexShaderCallback vertexShaderCallback;
 	PixelShaderCallback pixelShaderCallback;
 	void* shaderUniform;
+	Vector4f viewport;
 	
 public:
 	enum {
@@ -65,6 +66,10 @@ public:
 	bool initialize(FrameBuffer* frameBuffer, int depthBPP = 8);
 
 	void uninitialize();
+
+	void setViewport(const Vector4f& value);
+
+	const Vector4f& getViewport() const;
 
 	// Take the depth buffer into account
 	void setDepthTest(bool value);

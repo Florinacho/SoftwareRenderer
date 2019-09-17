@@ -181,6 +181,10 @@ struct Vector4 {
 		w = other.w;
 		return *this;
 	}
+
+	Vector3<T> getVector3() const {
+		return Vector3<T>(x, y, z);
+	}
 };
 
 typedef Vector4<float> Vector4f;

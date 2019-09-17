@@ -285,11 +285,32 @@ public:
 		m[15] = 1.0f;
 	}
 
-	void setFrustum(const float left, const float right, const float bottom, const float top, const float znear, const float zfar) {
-		const float k0 = 2.0f * znear;
+	void setPerspective2(const float fieldOfView, const float aspectRatio, const float zNear, const float zFar) {
+		const float f = 1 / tanf(fieldOfView / 2.0f);
+		const float q = zFar / (zFar - zNear);
+		m[ 0] = aspectRatio * f;
+		m[ 1] = 0.0f;
+		m[ 2] = 0.0f;
+		m[ 3] = 0.0f;
+		m[ 4] = 0.0f;
+		m[ 5] = f;
+		m[ 6] = 0.0f;
+		m[ 7] = 0.0f;
+		m[ 8] = 0.0f;
+		m[ 9] = 0.0f;
+		m[10] = q;
+		m[11] = - zNear * q;
+		m[12] = 0.0f;
+		m[13] = 0.0f;
+		m[14] = 1.0f;
+		m[15] = 0.0f;
+	}
+
+	void setFrustum(const float left, const float right, const float bottom, const float top, const float zNear, const float zFar) {
+		const float k0 = 2.0f * zNear;
 		const float k1 = right - left;
 		const float k2 = top - bottom;
-		const float k3 = zfar - znear;
+		const float k3 = zFar - zNear;
 		m[ 0] = k0 / k1;
 		m[ 1] = 0.0f;
 		m[ 2] = 0.0f;
@@ -300,20 +321,19 @@ public:
 		m[ 7] = 0.0f;
 		m[ 8] = (right + left) / k1;
 		m[ 9] = (top + bottom) / k2;
-		m[10] =-(zfar + znear) / k3;
+		m[10] =-(zFar + zNear) / k3;
 		m[11] =-1.0f;
 		m[12] = 0.0f;
 		m[13] = 0.0f;
-//		m[14] =-zfar / k3;
-		m[14] =-(k0 * zfar) / k3;
-		m[15] = 0.0f;
+		m[14] =-(k0 * zFar) / k3;
+		m[15] = 1.0f;
 	}
 
 	// Right handed
-	void setPerspective(const float fieldOfView, const float aspectRatio, const float znear, const float zfar) {
-		const float ymax = znear * tan(fieldOfView * M_PI / 360.0);
+	void setPerspective(const float fieldOfView, const float aspectRatio, const float zNear, const float zFar) {
+		const float ymax = zNear * tanf(fieldOfView * M_PI / 360.0);
 		const float xmax = ymax * aspectRatio;
-		setFrustum(-xmax, xmax,-ymax, ymax, znear, zfar);
+		setFrustum(-xmax, xmax,-ymax, ymax, zNear, zFar);
 	}
 
 	void setCameraLookAtTransformation(const Vector3f& position, const Vector3f& target, const Vector3f& up) {
@@ -437,6 +457,29 @@ public:
 		m[13] = translate.y;
 		m[14] = 0.0f;
 		m[15] = 1.0f;
+	}
+
+	void setViewport(const T x, const T y, const T z, const T w) {
+		m[ 0] = (z - x) / (T)2;
+		m[ 1] = (T)0;
+		m[ 2] = (T)0;
+		m[ 3] = (T)0;
+		m[ 4] = (T)0;
+		m[ 5] = (w - y) / (T)2;
+		m[ 6] = (T)0;
+		m[ 7] = (T)0;
+		m[ 8] = (T)0;
+		m[ 9] = (T)0;
+		m[10] = (T)1 / (T)2;
+		m[11] = (T)0;
+		m[12] = (T)0;
+		m[13] = (T)0;
+		m[14] = (T)0;
+		m[15] = (T)1;
+
+		m[12] = (z + x) / 2.0f;
+		m[13] = (y + w) / 2.0f;
+		m[14] = 0.5f;
 	}
 };
 

@@ -3,11 +3,11 @@
 
 #include "Vertex.h"
 
-static const float CubeSize = 100.0f;
+static const float CubeSize = 10.0f;
 static const float CubeHalfSize = CubeSize / 2.0f;
 
 static const Vertex CubeVertices[] = {
-	// Front
+	// Back
 	Vertex(vec3(-CubeHalfSize, CubeHalfSize, CubeHalfSize), vec2(0.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 0.5f)),
 	Vertex(vec3(-CubeHalfSize,-CubeHalfSize, CubeHalfSize), vec2(0.0f, 0.0f), vec4(1.0f, 0.0f, 0.0f, 0.5f)),
 	Vertex(vec3( CubeHalfSize,-CubeHalfSize, CubeHalfSize), vec2(1.0f, 0.0f), vec4(1.0f, 0.0f, 0.0f, 0.5f)),
@@ -15,7 +15,7 @@ static const Vertex CubeVertices[] = {
 	Vertex(vec3( CubeHalfSize,-CubeHalfSize, CubeHalfSize), vec2(1.0f, 0.0f), vec4(1.0f, 0.0f, 0.0f, 0.5f)),
 	Vertex(vec3( CubeHalfSize, CubeHalfSize, CubeHalfSize), vec2(1.0f, 1.0f), vec4(1.0f, 0.0f, 0.0f, 0.5f)),
 
-	// Back,
+	// Front
 	Vertex(vec3(-CubeHalfSize, CubeHalfSize,-CubeHalfSize), vec2(0.0f, 1.0f), vec4(1.0f, 1.0f, 0.0f, 0.5f)),
 	Vertex(vec3( CubeHalfSize, CubeHalfSize,-CubeHalfSize), vec2(1.0f, 1.0f), vec4(1.0f, 1.0f, 0.0f, 0.5f)),
 	Vertex(vec3( CubeHalfSize,-CubeHalfSize,-CubeHalfSize), vec2(1.0f, 0.0f), vec4(1.0f, 1.0f, 0.0f, 0.5f)),
@@ -39,19 +39,21 @@ static const Vertex CubeVertices[] = {
 	Vertex(vec3( CubeHalfSize, CubeHalfSize,-CubeHalfSize), vec2(1.0f, 0.0f), vec4(0.0f, 1.0f, 1.0f, 0.5f)),
 	Vertex(vec3( CubeHalfSize, CubeHalfSize, CubeHalfSize), vec2(1.0f, 1.0f), vec4(0.0f, 1.0f, 1.0f, 0.5f)),
 
+	// Up
+	Vertex(vec3(-CubeHalfSize, CubeHalfSize,-CubeHalfSize), vec2(0.0f, 0.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
+	Vertex(vec3(-CubeHalfSize, CubeHalfSize, CubeHalfSize), vec2(0.0f, 0.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
+	Vertex(vec3( CubeHalfSize, CubeHalfSize,-CubeHalfSize), vec2(0.0f, 0.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
+	Vertex(vec3( CubeHalfSize, CubeHalfSize,-CubeHalfSize), vec2(0.0f, 0.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
+	Vertex(vec3(-CubeHalfSize, CubeHalfSize, CubeHalfSize), vec2(0.0f, 0.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
+	Vertex(vec3( CubeHalfSize, CubeHalfSize, CubeHalfSize), vec2(0.0f, 0.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
+
+	// Down
 	Vertex(vec3(-CubeHalfSize,-CubeHalfSize, CubeHalfSize), vec2(0.0f, 1.0f), vec4(0.0f, 0.0f, 1.0f, 0.5f)),
 	Vertex(vec3(-CubeHalfSize,-CubeHalfSize,-CubeHalfSize), vec2(0.0f, 0.0f), vec4(0.0f, 0.0f, 1.0f, 0.5f)),
 	Vertex(vec3( CubeHalfSize,-CubeHalfSize,-CubeHalfSize), vec2(1.0f, 0.0f), vec4(0.0f, 0.0f, 1.0f, 0.5f)),
 	Vertex(vec3(-CubeHalfSize,-CubeHalfSize, CubeHalfSize), vec2(0.0f, 1.0f), vec4(0.0f, 0.0f, 1.0f, 0.5f)),
 	Vertex(vec3( CubeHalfSize,-CubeHalfSize,-CubeHalfSize), vec2(1.0f, 0.0f), vec4(0.0f, 0.0f, 1.0f, 0.5f)),
 	Vertex(vec3( CubeHalfSize,-CubeHalfSize, CubeHalfSize), vec2(1.0f, 1.0f), vec4(0.0f, 0.0f, 1.0f, 0.5f)),
-
-	Vertex(vec3(-CubeHalfSize, CubeHalfSize,-CubeHalfSize), vec2(0.0f, 0.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
-	Vertex(vec3(-CubeHalfSize, CubeHalfSize, CubeHalfSize), vec2(0.0f, 1.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
-	Vertex(vec3( CubeHalfSize, CubeHalfSize,-CubeHalfSize), vec2(1.0f, 0.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
-	Vertex(vec3( CubeHalfSize, CubeHalfSize,-CubeHalfSize), vec2(1.0f, 0.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
-	Vertex(vec3(-CubeHalfSize, CubeHalfSize, CubeHalfSize), vec2(0.0f, 1.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
-	Vertex(vec3( CubeHalfSize, CubeHalfSize, CubeHalfSize), vec2(1.0f, 1.0f), vec4(1.0f, 0.0f, 1.0f, 0.5f)),
 };
 static const unsigned int CubeVerticesSize = sizeof(CubeVertices);
 static const unsigned int CubeVerticesCount = CubeVerticesSize / sizeof(Vertex);

@@ -2,6 +2,8 @@
 #include "Graphics.h"
 #include "Image.h"
 
+#include "Matrix4.h"
+
 //https://github.com/ssloy/tinyrenderer/wiki/Lesson-2:-Triangle-rasterization-and-back-face-culling
 //https://github.com/joshb/linedrawing/blob/master/Rasterizer.cpp
 
@@ -77,7 +79,7 @@ void Graphics::drawLine(const Vector3f& begin, const Vector4f& beginColor, const
 
 
 //https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
-inline float edgeFunction(const Vector3f& a, const Vector3f& b, const Vector3f& c) {
+inline float edgeFunction(const Vector4f& a, const Vector4f& b, const Vector4f& c) {
 	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x); 
 }
 
@@ -108,22 +110,23 @@ inline int max(int a, int b, int c, int max) {
 	}
 	return ans;
 }
-
+#include <stdio.h>
+//https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
 void Graphics::drawTriangle(
 		const Vector3f& v0, const Vector2f& uv0, const Vector4f& c0, 
 		const Vector3f& v1, const Vector2f& uv1, const Vector4f& c1, 
 		const Vector3f& v2, const Vector2f& uv2, const Vector4f& c2) {
 
 	VertexShaderData vertex[3];
-	vertex[0].position = v0;
+	vertex[0].position = Vector4f(v0.x, v0.y, v0.z, 1.0f);
 	vertex[0].uv = uv0;
 	vertex[0].color = c0;
 
-	vertex[1].position = v1;
+	vertex[1].position = Vector4f(v1.x, v1.y, v1.z, 1.0f);
 	vertex[1].uv = uv1;
 	vertex[1].color = c1;
 
-	vertex[2].position = v2;
+	vertex[2].position = Vector4f(v2.x, v2.y, v2.z, 1.0f);
 	vertex[2].uv = uv2;
 	vertex[2].color = c2;
 
@@ -131,19 +134,34 @@ void Graphics::drawTriangle(
 		vertexShaderCallback(vertex[0], shaderUniform);
 		vertexShaderCallback(vertex[1], shaderUniform);
 		vertexShaderCallback(vertex[2], shaderUniform);
+
+		for (unsigned int index = 0; index < 3; ++index) {
+			if (vertex[index].position.w != 0.0f) {
+				vertex[index].position.x /= vertex[index].position.w;
+				vertex[index].position.y /= vertex[index].position.w;
+				vertex[index].position.z /= vertex[index].position.w;
+			}
+//			Matrix4f viewportTransformation;
+//			viewportTransformation.setViewport(viewport.x, viewport.y, viewport.z, viewport.w);
+//			vertex[index].position = viewportTransformation * vertex[index].position;
+		}
 	} 
 
 	const Vector2u size = colorBuffer.getSize();
-	const int minX = min(vertex[0].position.x, vertex[1].position.x, vertex[2].position.z, 0);
+	const int minX = min(vertex[0].position.x, vertex[1].position.x, vertex[2].position.x, 0);
 	const int minY = min(vertex[0].position.y, vertex[1].position.y, vertex[2].position.y, 0);
 	const int maxX = max(vertex[0].position.x, vertex[1].position.x, vertex[2].position.x, size.x);
 	const int maxY = max(vertex[0].position.y, vertex[1].position.y, vertex[2].position.y, size.y);
 
 	const float area = edgeFunction(vertex[0].position, vertex[1].position, vertex[2].position);
 
+	if (area <= 0.0f) {
+		return;
+	}
+
 	for (int j = minY; j <= maxY; ++j) {
 		for (int i = minX; i <= maxX; ++i) {
-			const Vector3f p((float)i + 0.5f, (float)j + 0.5f, 0.0f);
+			const Vector4f p((float)i + 0.5f, (float)j + 0.5f, 0.0f, 0.0f);
 			Vector3f weight;
 			if ((weight.x = edgeFunction(vertex[1].position, vertex[2].position, p)) < 0.0f) {
 				continue;
@@ -156,15 +174,17 @@ void Graphics::drawTriangle(
 			}
 			weight /= area;
 
-			const float depth = 1.0f - (vertex[0].position.z * weight.x + vertex[1].position.z * weight.y + vertex[2].position.z * weight.z) / (200.0f - 0.1f);
+			const float depth = (vertex[0].position.z * weight.x + vertex[1].position.z * weight.y + vertex[2].position.z * weight.z);
+
+//			if (fabs(1.0f - w) > 0.1f)printf("w = %f\n", w);
 
 			// Clip relative z value
-			if (depth < 0.0f || depth > 1.0f) {
-				continue;
+			if (depth < -6.0f || depth > 1.0f) {
+//				continue;
 			}
 
-			if (depthTest && depth < depthBuffer.getPixel(i, j).x) {
-				continue;
+			if (depthTest && depth > depthBuffer.getPixel(i, j).x) {
+//				continue;
 			}
 
 			PixelShaderData pixelShaderData;
@@ -185,7 +205,7 @@ void Graphics::drawTriangle(
 			colorBuffer.setPixel(i, j, pixelShaderData.color);
 
 			if (depthMask) {
-				depthBuffer.setPixel(i, j, Vector4f(pixelShaderData.position.z, pixelShaderData.position.z, pixelShaderData.position.z, 1.0f));
+				depthBuffer.setPixel(i, j, Vector4f(depth, depth, depth, 1.0f));
 			}
 		}
 	} 
@@ -238,12 +258,25 @@ bool Graphics::initialize(FrameBuffer* inframeBuffer, int depthBPP) {
 		break;
 	}
 
+	viewport.x = 0.0f;
+	viewport.y = 0.0f;
+	viewport.z = frameBuffer->getSize().x;
+	viewport.w = frameBuffer->getSize().y;
+
 	return true;
 }
 
 void Graphics::uninitialize() {
 	colorBuffer.removeData();
 	depthBuffer.removeData();
+}
+
+void Graphics::setViewport(const Vector4f& value) {
+	viewport = value;
+}
+
+const Vector4f& Graphics::getViewport() const {
+	return viewport;
 }
 
 void Graphics::setDepthTest(bool value) {
