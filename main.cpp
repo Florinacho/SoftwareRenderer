@@ -4,22 +4,16 @@
 #include "Matrix4.h"
 #include "CubeMesh.h"
 
-//#define DEBUG_PRINT_FPS
-
-#if defined (DEBUG_PRINT_FPS)
-#include "Timer.h"
-#endif //DEBUG_PRINT_FPS
-
-#include <glm/vec4.hpp> // glm::vec4
-#include <glm/mat4x4.hpp> // glm::mat4
-#include <glm/gtc/matrix_transform.hpp> // glm::translate, glm::rotate, glm::scale, glm::perspective
-
 const Vector2u screenSize(800, 600);
+const Vector4f viewport(0.0f, 0.0f, (float)screenSize.x, (float)screenSize.y);
 
 struct Camera {
 	vec3 position;
 	vec3 rotation;
 	vec3 scale;
+
+	vec3 target;
+	vec3 up;
 
 	float fieldOfView;
 	float aspectRatio;
@@ -35,15 +29,14 @@ struct Camera {
 	Camera() {
 		position = vec3( 0.0f, 0.0f, 0.0f);
 		rotation = vec3( 0.0f, 0.0f, 0.0f);
-		scale = vec3(1.0f, 1.0f, 1.0f);
+		scale    = vec3( 1.0f, 1.0f, 1.0f);
+		target   = vec3( 0.0f, 0.0f,-1.0f);
+		up       = vec3( 0.0f, 1.0f, 0.0f);
 
-		fieldOfView = 60.0f;
-		aspectRatio = (float)screenSize.y / (float)screenSize.x;
-		zNear = 0.1f;
+		fieldOfView = 75.0f;
+		aspectRatio = (float)screenSize.x / (float)screenSize.y;
+		zNear = 10.0f;
 		zFar = 300.0f;
-
-		view.setIdentity();
-		projection.setIdentity();
 
 		viewDirty = true;
 		projectionDirty = true;
@@ -51,14 +44,12 @@ struct Camera {
 
 	void update() {
 		if (viewDirty == true) {
-//			view.setTransformation(position, rotation, scale);
-//			view.invert();
+			view.setCameraLookAtTransformation(position, target, up);
 			viewDirty = false;
 		}
 
 		if (projectionDirty == true) {
-//			projection.setPerspective(fieldOfView, aspectRatio, zNear, zFar);
-			projection.setPerspective2(fieldOfView, aspectRatio, zNear, zFar);
+			projection.setPerspective(fieldOfView, aspectRatio, zNear, zFar);
 			projectionDirty = false;
 		}
 	}
@@ -66,7 +57,6 @@ struct Camera {
 
 struct Mesh3D {
 	Image* texture;
-
 	mat4 model;
 
 	vec3 position;
@@ -77,21 +67,32 @@ struct Mesh3D {
 
 	Mesh3D() {
 		texture = NULL;
-		position = vec3( 0.0f, 0.0f, 0.0f);
-		rotation = vec3( 0.0f, 0.0f, 0.0f);
-		scale = vec3(1.0f, 1.0f, 1.0f);
-
-		alphaBlend = false;
 
 		model.setIdentity();
+
+		position = vec3(  0.0f,  0.0f,-50.0f);
+		rotation = vec3(  0.0f,  0.0f,  0.0f);
+		scale    = vec3(  1.0f,  1.0f,  1.0f);
+
+		alphaBlend = false;
 	}
 
 	void draw(Graphics* graphics) {
-		model.setTransformation(position, rotation, scale);
+		mat4 translationMatrix;
+		mat4 rotationXMatrix, rotationYMatrix, rotationZMatrix;
+		mat4 scaleMatrix;
+		mat4 modelViewProjection;
 
-		mat4 ModelViewProjection = camera.projection * camera.view * model;
+		translationMatrix.setTranslation(vec4(position.x, position.y, position.z, 1.0f));
+		rotationXMatrix.setRotationX(deg2rad(rotation.x));
+		rotationYMatrix.setRotationY(deg2rad(rotation.y));
+		rotationZMatrix.setRotationZ(deg2rad(rotation.z));
+		scaleMatrix.setScale(scale);
 
-		graphics->setActiveTexture(NULL);
+		model = translationMatrix * rotationZMatrix * rotationYMatrix * rotationXMatrix * scaleMatrix;
+		modelViewProjection = camera.projection * camera.view * model;
+
+		graphics->setActiveTexture(texture);
 
 		graphics->setVertexShaderCallback(VertexShader);
 		graphics->setPixelShaderCallback(PixelShader);
@@ -100,7 +101,7 @@ struct Mesh3D {
 		graphics->setDepthMask(true);
 		graphics->setAlphaBlend(alphaBlend);
 
-		graphics->setShaderUniform(&ModelViewProjection);
+		graphics->setShaderUniform(&modelViewProjection);
 
 		graphics->drawPrimitive(Graphics::EPT_TRIANGLES, CubeVertices, CubeVerticesCount);
 	}
@@ -109,8 +110,12 @@ struct Mesh3D {
 		if (uniform == NULL) {
 			return;
 		}
-		mat4 ModelViewProjection = *reinterpret_cast<mat4*>(uniform);
-		vertex.position = ModelViewProjection * vertex.position;
+
+		mat4 modelViewProjection = *reinterpret_cast<mat4*>(uniform);
+
+		vertex.position = modelViewProjection * vertex.position;
+
+		vertex.position /= vertex.position.w;
 
 		mat4 viewport;
 		viewport.setViewport(0.0f, 0.0f, (float)screenSize.x, (float)screenSize.y);
@@ -133,11 +138,12 @@ int main() {
 
 	status = frameBuffer.initialize(screenSize.x, screenSize.y, 32);
 	if (status != FrameBuffer::ERR_NO_ERROR) {
-		printf("Failed to initialize frame buffer.\nError: %s\n", FrameBuffer::ErrorText[status]);
+		printf("Failed to initialize frame buffer.\nError: %s\n", 
+			FrameBuffer::ErrorText[status]);
 		return 1;
 	}
 	
-	if (graphics.initialize(&frameBuffer) == false) {
+	if (graphics.initialize(&frameBuffer, 32) == false) {
 		printf("Failed to initialize graphics!\n");
 		return 2;
 	}
@@ -147,38 +153,21 @@ int main() {
 		return 3;
 	}
 
-	mesh.position.x = 0.0f;
-	mesh.position.y = 0.0f;
-	mesh.position.z = 50.0f;
+	mesh.texture = &image;
 
-	mesh.alphaBlend = false;
-
-//	camera.position = vec3(0.0f, 100.0f, 0.0f);
-//	camera.rotation = vec3(-45.0f, 0.0f, 0.0f);
-	camera.viewDirty = true;
-
-	while (true) {
+	while (true) 
+	{
 		graphics.clear();
 
 		camera.update();
 
 		// Draw background
 		graphics.setActiveTexture(&image);
-		graphics.drawRectangle(vec4(0.0f, 0.0f, (float)screenSize.x, (float)screenSize.y), vec4(1.0f, 1.0f, 1.0f, 1.0f));
+		graphics.drawRectangle(viewport, vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
-//		camera.position.z += 1.1f;
-		camera.viewDirty = true;
-
-		mesh.position.y += 0.5f;
-//		mesh.position.z += 1.0f;if (mesh.position.z  > 200.0f) mesh.position.z = 0.0f;
-//		mesh.rotation.y += 0.5f;
 		mesh.rotation += vec3(0.33f, 0.66f, 0.99f);
-//		mesh.scale.y += 0.1f;
 
 		mesh.draw(&graphics);
-
-		graphics.setActiveTexture(graphics.getDepthBuffer());
-		graphics.drawRectangle(vec4(0.0f, 0.0f, 200.0f, 150.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f));
 
 		graphics.swap();
 	}

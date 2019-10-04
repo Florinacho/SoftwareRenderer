@@ -34,11 +34,11 @@ int FrameBuffer::initialize(int width, int height, int bitsPerPixel) {
 		return ERR_CANNOT_OPEN_FILE;
 	}
     
-	if (ioctl(fileDescriptor, FBIOGET_FSCREENINFO, &fixInfo)) {
+	if (ioctl(fileDescriptor, FBIOGET_FSCREENINFO, &fixInfo) != 0) {
 		return ERR_CANNOT_READ_FIX_INFO;
 	}
 
-	if (ioctl(fileDescriptor, FBIOGET_VSCREENINFO, &varInfo)) {
+	if (ioctl(fileDescriptor, FBIOGET_VSCREENINFO, &varInfo) != 0) {
 		return ERR_CANNOT_READ_VAR_INFO;
 	}
 
@@ -113,10 +113,31 @@ void FrameBuffer::draw(const Image* image) {
 	if ((bpp / 8) != image->getPixelSize()) {
 		return;
 	}
+	if (bpp / 8 != 4) {
+		return;
+	}
 
 	const unsigned int visualLineLength = size.x * (bpp / 8);
 
+	unsigned char lineData[visualLineLength];
+	unsigned char* src = lineData;
+
 	for (unsigned int index = 0; index < size.y; ++index) {
-		memcpy(buffer + index * fixInfo.line_length, image->getData() + index * visualLineLength, visualLineLength);
+#if 1
+		memcpy(
+			buffer + index * fixInfo.line_length, 
+			image->getData() + index * visualLineLength, 
+			visualLineLength);
+#elif 1
+		const float proc = (float)index / (float)size.y;
+		unsigned char data = (unsigned char)(255.0f * proc);
+		memset(lineData, data, visualLineLength);
+		memcpy(
+			buffer + index * fixInfo.line_length, 
+			src, 
+			visualLineLength);
+#else
+		memset(buffer + index * fixInfo.line_length, index % 600, visualLineLength);
+#endif
 	}
 }

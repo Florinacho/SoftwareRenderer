@@ -1,12 +1,16 @@
 #ifndef __GRAPHICS_H__
 #define __GRAPHICS_H__
 
+#include <thread> 
+
 #include "FrameBuffer.h"
 #include "Vertex.h"
 #include "Image.h"
+#include "Matrix4.h"
 
 struct VertexShaderData {
 	Vector4f position;
+	Vector3f normal;
 	Vector2f uv;
 	Vector4f color;
 	int index;
@@ -26,8 +30,6 @@ typedef void (*VertexShaderCallback)(VertexShaderData&, void*);
 typedef void (*PixelShaderCallback)(PixelShaderData&, void*);
 	
 class Graphics {
-	static const unsigned int MAX_BUFFER_COUNT = 1;		// Unused
-
 	FrameBuffer* frameBuffer;
 	const Image* activeTexture;
 
@@ -48,7 +50,8 @@ class Graphics {
 	PixelShaderCallback pixelShaderCallback;
 	void* shaderUniform;
 	Vector4f viewport;
-	
+	Matrix4f viewportTransformation;
+
 public:
 	enum {
 		EPT_LINES,

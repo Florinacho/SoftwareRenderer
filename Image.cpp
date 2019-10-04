@@ -35,8 +35,16 @@ void Image::create(const Vector2u& insize, int inpixelFormat) {
 	const unsigned int pixelCount = size.x * size.y;
 	const unsigned int pixelSize = getPixelSize();
 	const unsigned int totalPixelSize = pixelCount * pixelSize;
-	data = new unsigned char[totalPixelSize];
-	memset(data, totalPixelSize, 0);
+	switch (inpixelFormat) {
+	case Image::EPF_DEPTH :
+		fdata = new float[pixelCount];
+		memset(fdata, pixelCount, 0);
+		break;
+	default :
+		data = new unsigned char[totalPixelSize];
+		memset(data, totalPixelSize, 0);
+		break;
+	}
 }
 
 const unsigned char* Image::getData() const {
@@ -65,6 +73,8 @@ unsigned int Image::getPixelSize() const {
 		return 3;
 	case Image::EPF_R8G8B8A8 :
 		return 4;
+	case Image::EPF_DEPTH :
+		return sizeof(float);
 	}
 	return 0;
 }
@@ -74,6 +84,7 @@ bool Image::hasAlpha() const {
 	case Image::EPF_L8 :
 	case Image::EPF_R8G8B8 :
 	case Image::EPF_R5G6B5 :
+	case Image::EPF_DEPTH :
 		return false;
 	case Image::EPF_R8G8B8A8 :
 		return true;
@@ -352,6 +363,9 @@ void Image::setPixel(unsigned int x, unsigned int y, const Vector4f& value) {
 		data[pixelIndex + 1] = green;
 		data[pixelIndex + 2] = red;
 		data[pixelIndex + 3] = alpha;
+		break;	
+	case Image::EPF_DEPTH :
+		fdata[y * size.x + x] = value.x;
 		break;
 	}
 }
@@ -401,6 +415,13 @@ Vector4f Image::getPixel(unsigned int x, unsigned int y) const {
 		ans.y = (float)data[pixelIndex + 1] / 255.0f;
 		ans.x = (float)data[pixelIndex + 2] / 255.0f;
 		ans.w = (float)data[pixelIndex + 3] / 255.0f;
+		break;
+	case Image::EPF_DEPTH :
+		ans.x = fdata[y * size.x + x];
+//		ans.x = 300.0f * (0.1f + ans.x) / ((300.0f - 0.1f) * ans.x);
+		ans.y = ans.x;
+		ans.z = ans.x;
+		ans.w = 1.0f;
 		break;
 	}
 	
