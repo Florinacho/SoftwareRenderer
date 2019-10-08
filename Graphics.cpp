@@ -1,4 +1,6 @@
+#include <stdio.h>
 #include <string.h>
+
 #include "Graphics.h"
 #include "Image.h"
 
@@ -7,30 +9,33 @@
 //https://github.com/ssloy/tinyrenderer/wiki/Lesson-2:-Triangle-rasterization-and-back-face-culling
 //https://github.com/joshb/linedrawing/blob/master/Rasterizer.cpp
 
-void DefaultVertexShader2D(VertexShaderData& data, void* uniform) {
+void DefaultVertexShader(VertexShaderData& vertex, void* uniform) {
+	const mat4 projection = *reinterpret_cast<const mat4*>(uniform);
+	vertex.position = projection * vertex.position;
 }
 
-void DefaultPixelShader2D(PixelShaderData& data, void* uniform) {
-	if (data.texture != NULL) {
-		data.color *= data.texture->getPixelByUV(data.uv);
+void DefaultPixelShader(PixelShaderData& data, void* uniform) {
+	if (data.texture[0] == NULL) {
+		return;
 	}
+	data.color *= data.texture[0]->getPixelByUV(data.uv);
 }
 
 void Graphics::drawLine(const Vector3f& begin, const Vector4f& beginColor, const Vector3f& end, const Vector4f& endColor) {
 	float x1 = begin.x;
 	float y1 = begin.y;
-	float z1 = begin.z;
+//	float z1 = begin.z;
 
 	float x2 = end.x;
 	float y2 = end.y;
-	float z2 = end.z;
+//	float z2 = end.z;
 
 	Vector4f color1 = beginColor;
 	Vector4f color2 = endColor;
 	
 	float xdiff = (x2 - x1);
 	float ydiff = (y2 - y1);
-	float zdiff = (z2 - z1);
+//	float zdiff = (z2 - z1);
 
 	if(xdiff == 0.0f && ydiff == 0.0f) {
 		colorBuffer.setPixel(x1, y1, color1);
@@ -113,34 +118,23 @@ inline int max(int a, int b, int c, int max) {
 	}
 	return ans;
 }
-#include <stdio.h>
-bool locked = false;
+
 //https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
 void Graphics::drawTriangle(
 		const Vector3f& v0, const Vector2f& uv0, const Vector4f& c0, 
 		const Vector3f& v1, const Vector2f& uv1, const Vector4f& c1, 
 		const Vector3f& v2, const Vector2f& uv2, const Vector4f& c2) {
 
-	Vector3f normal;
-	normal.calculateNormal(v0, v1, v2);
-	normal.normalize();
-	normal.x *= 10.0f;
-	normal.y *= 10.0f;
-	normal.z *= 10.0f;
-
 	VertexShaderData vertex[3];
 	vertex[0].position = Vector4f(v0.x, v0.y, v0.z, 1.0f);
-	vertex[0].normal = normal;
 	vertex[0].uv = uv0;
 	vertex[0].color = c0;
 
 	vertex[1].position = Vector4f(v1.x, v1.y, v1.z, 1.0f);
-	vertex[1].normal = normal;
 	vertex[1].uv = uv1;
 	vertex[1].color = c1;
 
 	vertex[2].position = Vector4f(v2.x, v2.y, v2.z, 1.0f);
-	vertex[2].normal = normal;
 	vertex[2].uv = uv2;
 	vertex[2].color = c2;
 
@@ -148,6 +142,11 @@ void Graphics::drawTriangle(
 		vertexShaderCallback(vertex[0], shaderUniform);
 		vertexShaderCallback(vertex[1], shaderUniform);
 		vertexShaderCallback(vertex[2], shaderUniform);
+
+		for (unsigned int index = 0; index < 3; ++index) {
+			vertex[index].position /= vertex[index].position.w;
+			vertex[index].position = viewportTransformation * vertex[index].position;
+		}
 	} 
 
 	const Vector2u size = colorBuffer.getSize();
@@ -177,37 +176,46 @@ void Graphics::drawTriangle(
 			}
 			weight /= area;
 
-			const float depth = (
+			const float depth =
 					vertex[0].position.z * weight.x + 
 					vertex[1].position.z * weight.y + 
-					vertex[2].position.z * weight.z);
+					vertex[2].position.z * weight.z;
 
 			if (depth < 0.0f || depth > 1.0f) {
 				continue;
 			}
 
-			if (depthTest && depth < depthBuffer.getPixel(i, j).x) {
+			if (renderFlags[ERT_DEPTH_TEST] && depth < depthBuffer.getPixel(i, j).x) {
 				continue;
 			}
 
 			PixelShaderData pixelShaderData;
 			if (pixelShaderCallback) {
-				pixelShaderData.texture = activeTexture;
-				pixelShaderData.position = Vector3f(i, j, depth);
-				pixelShaderData.uv = vertex[0].uv * weight.x + vertex[1].uv * weight.y + vertex[2].uv * weight.z;
-				pixelShaderData.color = vertex[0].color * weight.x + vertex[1].color * weight.y + vertex[2].color * weight.z;
+				for (unsigned int index = 0; index < MaxTextureCount; ++index) {
+					pixelShaderData.texture[index] = activeTexture[index];
+				}
+
+				pixelShaderData.uv = 
+						vertex[0].uv * weight.x + 
+						vertex[1].uv * weight.y + 
+						vertex[2].uv * weight.z;
+
+				pixelShaderData.color = 
+						vertex[0].color * weight.x + 
+						vertex[1].color * weight.y + 
+						vertex[2].color * weight.z;
 
 				pixelShaderCallback(pixelShaderData, shaderUniform);
 			} 
 
-			if (alphaBlend) {
+			if (renderFlags[ERT_ALPHA_BLEND]) {
 				const Vector4f pixel = colorBuffer.getPixel(i, j);
 				const float inv = 1.0f - pixelShaderData.color.w;
 				pixelShaderData.color = pixelShaderData.color * pixelShaderData.color.w + pixel * inv;
 			}
-			colorBuffer.setPixel(i, 600-j, pixelShaderData.color);
+			colorBuffer.setPixel(i, colorBuffer.getSize().y - j, pixelShaderData.color);
 
-			if (depthMask) {
+			if (renderFlags[ERT_DEPTH_MASK]) {
 				depthBuffer.setPixel(i, j, Vector4f(depth, depth, depth, 1.0f));
 			}
 		}
@@ -216,22 +224,24 @@ void Graphics::drawTriangle(
 	
 Graphics::Graphics() {
 	frameBuffer = NULL;
-	activeTexture = NULL;
+	for (unsigned int index = 0; index < MaxTextureCount; ++index) {
+		activeTexture[index] = NULL;
+	}
 
 	vertexShaderCallback = NULL;
 	pixelShaderCallback = NULL;
 	shaderUniform = NULL;
 
-	depthTest = true;
-	depthMask = true;
-	alphaBlend = false;
+	for (unsigned int index = 0; index < ERT_COUNT; ++index) {
+		renderFlags[index] = false;
+	}
 }
 
 Graphics::~Graphics() {
 	uninitialize();
 }
 
-bool Graphics::initialize(FrameBuffer* inframeBuffer, int depthBPP) {
+bool Graphics::initialize(FrameBuffer* inframeBuffer, int depthPixelType) {
 	frameBuffer = inframeBuffer;
 	if (frameBuffer == NULL) { 
 		return false;
@@ -252,17 +262,7 @@ bool Graphics::initialize(FrameBuffer* inframeBuffer, int depthBPP) {
 		break;
 	}
 
-	switch (depthBPP) {
-	case 8 :
-		depthBuffer.create(frameBuffer->getSize(), Image::EPF_L8);
-		break;
-	case 32 :
-		depthBuffer.create(frameBuffer->getSize(), Image::EPF_DEPTH);
-		break;
-	default :
-		return false;
-		break;
-	}
+	depthBuffer.create(frameBuffer->getSize(), depthPixelType);
 
 	setViewport(Vector4f(0.0f, 0.0f, frameBuffer->getSize().x, frameBuffer->getSize().y));
 
@@ -274,6 +274,14 @@ void Graphics::uninitialize() {
 	depthBuffer.removeData();
 }
 
+void Graphics::setFlag(const RenderFlag renderFlag, bool value) {
+	renderFlags[renderFlag] = value;
+}
+
+bool Graphics::getFlag(const RenderFlag renderFlag) const {
+	return renderFlags[renderFlag];
+}
+
 void Graphics::setViewport(const Vector4f& value) {
 	if (viewport == value) {
 		return;
@@ -282,41 +290,11 @@ void Graphics::setViewport(const Vector4f& value) {
 	viewport = value;
 
 	viewportTransformation.setViewport(viewport.x, viewport.y, viewport.z, viewport.w);
-
-	const float width = viewport.z - viewport.x;
-	const float height = viewport.w - viewport.y;
+	orthogonalProjection.setOrthogonal(0.0f, viewport.getWidth(), viewport.getHeight(), 0.0f, 0.0f, 1.0f);
 }
 
 const Vector4f& Graphics::getViewport() const {
 	return viewport;
-}
-
-void Graphics::setDepthTest(bool value) {
-	depthTest = value;
-}
-
-bool Graphics::getDepthTest() const {
-	return depthTest;
-}
-
-void Graphics::setDepthMask(bool value) {
-	depthMask = value;
-}
-
-bool Graphics::getDepthMask() const {
-	return depthMask;
-}
-
-void Graphics::setAlphaBlend(bool value) {
-	alphaBlend = value;
-}
-
-bool Graphics::getAlphaBlend() const {
-	return alphaBlend;
-}
-
-Image* Graphics::getColorBuffer() {
-	return &colorBuffer;
 }
 
 void Graphics::setVertexShaderCallback(VertexShaderCallback callback) {
@@ -331,12 +309,24 @@ void Graphics::setShaderUniform(void* uniform) {
 	shaderUniform = uniform;
 }
 
-void Graphics::setActiveTexture(const Image* texture) {
-	activeTexture = texture;
+void Graphics::setActiveTexture(const unsigned int index, const Image* texture) {
+	if (index >= MaxTextureCount) {
+		return;
+	}
+
+	activeTexture[index] = texture;
 }
 
-const Image* Graphics::getActiveTexture() const {
-	return activeTexture;
+const Image* Graphics::getActiveTexture(const unsigned int index) const {
+	if (index >= MaxTextureCount) {
+		return NULL;
+	}
+
+	return activeTexture[index];
+}
+
+Image* Graphics::getColorBuffer() {
+	return &colorBuffer;
 }
 
 Image* Graphics::getDepthBuffer() {
@@ -374,29 +364,34 @@ void Graphics::drawPrimitive(int primitiveType, const Vertex* vertices, unsigned
 		for (unsigned int index = 2, k = 1; index < vertexCount; ++index, k = !k) {
 			drawTriangle(
 				vertices[index - 0].position, vertices[index - 0].textureCoords, vertices[index - 0].color,
-				vertices[index - (k ? 1 : 2)].position, vertices[index - (k ? 1 : 2)].textureCoords, vertices[index - (k ? 1 : 2)].color,
-				vertices[index - (k ? 2 : 1)].position, vertices[index - (k ? 2 : 1)].textureCoords, vertices[index - (k ? 2 : 1)].color);
+				vertices[index - (k ? 2 : 1)].position, vertices[index - (k ? 2 : 1)].textureCoords, vertices[index - (k ? 2 : 1)].color,
+				vertices[index - (k ? 1 : 2)].position, vertices[index - (k ? 1 : 2)].textureCoords, vertices[index - (k ? 1 : 2)].color);
 		}
 		break;
 	}
 }
 
-void Graphics::drawLine(const Vector2f& begin, const Vector2f& end, const Vector4f& color) {
+void Graphics::draw2DLine(const Vector2f& begin, const Vector2f& end, const Vector4f& color) {
 	const Vertex vertices[] = {
 		Vertex(Vector3f(begin.x, begin.y, 0.0f), Vector2f(0.0f, 0.0f), color),
 		Vertex(Vector3f(end.x, end.y, 0.0f), Vector2f(1.0f, 1.0f), color)
 	};
 
-	setDepthTest(false);
-	setDepthMask(false);
-	setAlphaBlend((color.w < 1.0f) || ((activeTexture == NULL) ? activeTexture->hasAlpha() : false));
+	setFlag(ERT_DEPTH_TEST, false);
+	setFlag(ERT_DEPTH_MASK, false);
+	setFlag(ERT_ALPHA_BLEND, 
+		(color.w < 1.0f) || 
+		((activeTexture[0] == NULL) ? false : activeTexture[0]->hasAlpha()));
 
-	setVertexShaderCallback(DefaultVertexShader2D);
-	setPixelShaderCallback(DefaultPixelShader2D);
+	setVertexShaderCallback(DefaultVertexShader);
+	setPixelShaderCallback(DefaultPixelShader);
+
+	setShaderUniform(&orthogonalProjection);
+
 	drawPrimitive(EPT_LINES, vertices, 2);
 }
 
-void Graphics::drawRectangle(const Vector4f& rectangle, const Vector4f& color) {
+void Graphics::draw2DRectangle(const Vector4f& rectangle, const Vector4f& color) {
 	const Vertex vertices[] = {
 		Vertex(Vector3f(rectangle.x, rectangle.y, 0.0f), Vector2f(0.0f, 0.0f), color),
 		Vertex(Vector3f(rectangle.z, rectangle.y, 0.0f), Vector2f(1.0f, 0.0f), color),
@@ -404,12 +399,41 @@ void Graphics::drawRectangle(const Vector4f& rectangle, const Vector4f& color) {
 		Vertex(Vector3f(rectangle.z, rectangle.w, 0.0f), Vector2f(1.0f, 1.0f), color)
 	};
 
-	setDepthTest(false);
-	setDepthMask(false);
-	setAlphaBlend((color.w < 1.0f) || ((activeTexture == NULL) ? false : activeTexture->hasAlpha()));
+	setFlag(ERT_DEPTH_TEST, false);
+	setFlag(ERT_DEPTH_MASK, false);
+	setFlag(ERT_ALPHA_BLEND, 
+		(color.w < 1.0f) || 
+		((activeTexture[0] == NULL) ? false : activeTexture[0]->hasAlpha()));
 
-	setVertexShaderCallback(DefaultVertexShader2D);
-	setPixelShaderCallback(DefaultPixelShader2D);
+	setVertexShaderCallback(DefaultVertexShader);
+	setPixelShaderCallback(DefaultPixelShader);
+
+	setShaderUniform(&orthogonalProjection);
+
+	drawPrimitive(EPT_TRIANGLE_STRIP, vertices, 4);
+}
+
+void Graphics::draw2DImage(Image* image, const Vector4f& rectangle, const Vector4f color) {
+	const Vertex vertices[] = {
+		Vertex(Vector3f(rectangle.x, rectangle.y, 0.0f), Vector2f(0.0f, 0.0f), color),
+		Vertex(Vector3f(rectangle.z, rectangle.y, 0.0f), Vector2f(1.0f, 0.0f), color),
+		Vertex(Vector3f(rectangle.x, rectangle.w, 0.0f), Vector2f(0.0f, 1.0f), color),
+		Vertex(Vector3f(rectangle.z, rectangle.w, 0.0f), Vector2f(1.0f, 1.0f), color)
+	};
+
+	setActiveTexture(0, image);
+
+	setFlag(ERT_DEPTH_TEST, false);
+	setFlag(ERT_DEPTH_MASK, false);
+	setFlag(ERT_ALPHA_BLEND, 
+		(color.w < 1.0f) || 
+		((activeTexture[0] == NULL) ? false : activeTexture[0]->hasAlpha()));
+
+	setVertexShaderCallback(DefaultVertexShader);
+	setPixelShaderCallback(DefaultPixelShader);
+
+	setShaderUniform(&orthogonalProjection);
+
 	drawPrimitive(EPT_TRIANGLE_STRIP, vertices, 4);
 }
 

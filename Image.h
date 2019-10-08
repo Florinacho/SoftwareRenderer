@@ -13,10 +13,10 @@ class Image {
 
 public:
 	enum PixelFormat {
-		EPF_L8,		// Luminance
-		EPF_R5G6B5,
-		EPF_R8G8B8,	// Red + Green + Blue
-		EPF_R8G8B8A8,	// Red + Green + Blue + Alpha
+		EPF_L8,		// 8,  Luminance
+		EPF_R5G6B5,	// 16, 
+		EPF_R8G8B8,	// 24, Red + Green + Blue
+		EPF_R8G8B8A8,	// 32, Red + Green + Blue + Alpha
 
 		EPF_DEPTH,
 	};
@@ -68,8 +68,6 @@ public:
 	void blur(int value);
 
 	void generateNoise();
-	
-	void removeAlpha();
 };
 
 #endif // __IMAGE_H__

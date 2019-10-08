@@ -441,6 +441,14 @@ struct Vector4 {
 	Vector3<T> xyz() const {
 		return Vector3<T>(x, y, z);
 	}
+
+	T getWidth() const {
+		return z - x;
+	}
+
+	T getHeight() const {
+		return w - y;
+	}
 };
 
 typedef Vector4<float> Vector4f;

@@ -10,7 +10,7 @@ inline void swap(T& a, T& b) {
 	b = c;
 }
 
-/**
+/*
 Rotation: counter clockwise
 		     ^ y+
 		     |   / z-
@@ -28,7 +28,7 @@ Layout: Column-major
 	1	5	9	13
 	2	6	10	14
 	3	7	11	15
-/**/
+*/
 
 static float deg2rad(float degreeAngle) {
 	return degreeAngle * M_PI / 180.0f;
@@ -245,17 +245,17 @@ public:
 
 	Vector3<T> operator * (const Vector3<T>& other) const {
 		return Vector3<T>(
-				m[ 0] * other.x + m[ 4] * other.y + m[ 8] * other.z + m[12],
-				m[ 1] * other.x + m[ 5] * other.y + m[ 9] * other.z + m[13],
-				m[ 2] * other.x + m[ 6] * other.y + m[10] * other.z + m[14]);
+			m[ 0] * other.x + m[ 4] * other.y + m[ 8] * other.z + m[12],
+			m[ 1] * other.x + m[ 5] * other.y + m[ 9] * other.z + m[13],
+			m[ 2] * other.x + m[ 6] * other.y + m[10] * other.z + m[14]);
 	}
 
 	Vector4<T> operator * (const Vector4<T>& other) const {
 		return Vector4<T>(
-				m[ 0] * other.x + m[ 4] * other.y + m[ 8] * other.z + m[12] * other.w,
-				m[ 1] * other.x + m[ 5] * other.y + m[ 9] * other.z + m[13] * other.w,
-				m[ 2] * other.x + m[ 6] * other.y + m[10] * other.z + m[14] * other.w,
-				m[ 3] * other.x + m[ 7] * other.y + m[11] * other.z + m[15] * other.w);
+			m[ 0] * other.x + m[ 4] * other.y + m[ 8] * other.z + m[12] * other.w,
+			m[ 1] * other.x + m[ 5] * other.y + m[ 9] * other.z + m[13] * other.w,
+			m[ 2] * other.x + m[ 6] * other.y + m[10] * other.z + m[14] * other.w,
+			m[ 3] * other.x + m[ 7] * other.y + m[11] * other.z + m[15] * other.w);
 	}
 
 	Matrix4<T> operator * (const Matrix4<T>& other) const {
@@ -288,7 +288,7 @@ public:
 		return m[index];
 	}
 
-	void setOrthogonal(const float left, const float right, const float top, const float bottom, const float znear, const float zfar) {
+	void setOrthogonal(const float left, const float right, const float bottom, const float top, const float znear, const float zfar) {
 		const float rml = right - left;
 		const float tmb = top - bottom;
 		const float fmn = zfar - znear;
@@ -297,17 +297,14 @@ public:
 		m[ 1] = (T)0;
 		m[ 2] = (T)0;
 		m[ 3] = (T)0;
-
 		m[ 4] = (T)0;
 		m[ 5] = (T)2 / tmb;
 		m[ 6] = (T)0;
 		m[ 7] = (T)0;
-
 		m[ 8] = (T)0;
 		m[ 9] = (T)0;
 		m[10] =-(T)2 / fmn;
 		m[11] = (T)0;
-
 		m[12] =-(right + left) / rml;
 		m[13] =-(top + bottom) / tmb;
 		m[14] =-(zfar + znear) / fmn;
@@ -337,14 +334,10 @@ public:
 		m[15] = (T)1;
 	}
 
-	void setPerspectiveRH(const float fieldOfView, const float aspectRatio, const float zNear, const float zFar) {
+	void setPerspective(const float fieldOfView, const float aspectRatio, const float zNear, const float zFar) {
 		const float ymax = zNear * tanf(fieldOfView * M_PI / 360.0);
 		const float xmax = ymax * aspectRatio;
 		setFrustum(-xmax, xmax,-ymax, ymax, zNear, zFar);
-	}
-
-	inline void setPerspective(const float fieldOfView, const float aspectRatio, const float zNear, const float zFar) {
-		setPerspectiveRH(fieldOfView, aspectRatio, zNear, zFar);
 	}
 
 	void setCameraLookAtTransformation(const Vector3f& position, const Vector3f& target, const Vector3f& up) {
@@ -387,10 +380,9 @@ public:
 		m[13] = (T)0;
 		m[14] = (T)0;
 		m[15] = (T)1;
-
 		m[12] = (z + x) / 2.0f;
 		m[13] = (y + w) / 2.0f;
-		m[14] = 0.5f;
+		m[14] = (T)0.5f;
 	}
 
 	void setScale(const Vector3<T>& value) {
@@ -428,10 +420,10 @@ public:
 		m[12] = (T)translation.x;
 		m[13] = (T)translation.y;
 		m[14] = (T)translation.z;
-		m[15] = (T)1;
+		m[15] = (T)translation.w;
 	}
 
-	void setRotationX_RH(const float value) {
+	void setRotationX(const float value) {
 		m[ 0] = (T)1;
 		m[ 1] = (T)0;
 		m[ 2] = (T)0;
@@ -444,14 +436,13 @@ public:
 		m[ 9] = (T)-sin(value);
 		m[10] = (T)cos(value);
 		m[11] = (T)0;
-
 		m[12] = (T)0;
 		m[13] = (T)0;
 		m[14] = (T)0;
 		m[15] = (T)1;
 	}
 
-	void setRotationY_RH(const float value) {
+	void setRotationY(const float value) {
 		m[ 0] = (T)cos(value);
 		m[ 1] = (T)0;
 		m[ 2] = (T)-sin(value);
@@ -470,7 +461,7 @@ public:
 		m[15] = (T)1;
 	}
 
-	void setRotationZ_RH(const float value) {
+	void setRotationZ(const float value) {
 		m[ 0] = (T)cos(value);
 		m[ 1] = (T)sin(value);
 		m[ 2] = (T)0;
@@ -487,35 +478,6 @@ public:
 		m[13] = (T)0;
 		m[14] = (T)0;
 		m[15] = (T)1;
-	}
-
-	void buildTransformation(const Vector4<T>& translation, const Vector3<T>& rotation, const Vector3<T>& scale) {
-		m[ 0] = (T)scale.x;
-		m[ 1] = (T)0;
-		m[ 2] = (T)0;
-		m[ 3] = (T)0;
-		m[ 4] = (T)0;
-		m[ 5] = (T)scale.y;
-		m[ 6] = (T)0;
-		m[ 7] = (T)0;
-		m[ 8] = (T)0;
-		m[ 9] = (T)0;
-		m[10] = (T)scale.z;
-		m[11] = (T)0;
-		m[12] = (T)translation.x;
-		m[13] = (T)translation.y;
-		m[14] = (T)translation.z;
-		m[15] = (T)translation.w;
-	}
-
-	inline void setRotationX(const float value) {
-		setRotationX_RH(value);
-	}
-	inline void setRotationY(const float value) {
-		setRotationY_RH(value);
-	}
-	inline void setRotationZ(const float value) {
-		setRotationZ_RH(value);
 	}
 };
 

@@ -38,11 +38,11 @@ void Image::create(const Vector2u& insize, int inpixelFormat) {
 	switch (inpixelFormat) {
 	case Image::EPF_DEPTH :
 		fdata = new float[pixelCount];
-		memset(fdata, pixelCount, 0);
+		memset(fdata, 0, pixelCount);
 		break;
 	default :
 		data = new unsigned char[totalPixelSize];
-		memset(data, totalPixelSize, 0);
+		memset(data, 0, totalPixelSize);
 		break;
 	}
 }
@@ -117,10 +117,6 @@ bool Image::load(const char* filename) {
 	const unsigned int totalPixelsSize = pixelCount * pixelSize;
 	unsigned char* newdata = new unsigned char[totalPixelsSize];
 
-	unsigned char* pointer = newdata;
-	unsigned char* end = newdata + totalPixelsSize;
-	unsigned char tmp[4];
-
 	switch (header.compression) {
 	case 0: //no image data is present
 		printf("Image::load(%s) warning! No image data is present.\n", filename);
@@ -170,12 +166,12 @@ bool Image::load(const char* filename) {
 				}
 
 				if (repeat > 0) {
-					for (int k = 0; k < pixelSize; ++k) {
+					for (unsigned int k = 0; k < pixelSize; ++k) {
 						ptr[k] = sample[k];
 					}
 					repeat--;
 				} else { /* direct > 0 */
-					if (fread (ptr, pixelSize, 1, file) < 1) {
+					if (fread(ptr, pixelSize, 1, file) < 1) {
 						printf("Image::load(%s) error! Cannot read pixel data 2\n", filename);
 						fclose(file);
 						return false;
@@ -253,12 +249,13 @@ void Image::fill(const Vector2u insize, PixelFormat pixelFormat, const Vector4f&
 		case Image::EPF_L8 :
 			memcpy(pointer, pixelData, pixelSize);
 			break;
+		default :
+			;
 		}
 	}
 }
 
 void Image::flipVertical() {
-	const unsigned int pixelCount = getPixelCount();
 	const unsigned int pixelSize = getPixelSize();
 	unsigned char tmp[8];
 
@@ -278,7 +275,6 @@ void Image::flipVertical() {
 }
 
 void Image::flipHorizontal() {
-	const unsigned int pixelCount = getPixelCount();
 	const unsigned int pixelSize = getPixelSize();
 	unsigned char tmp[8];
 
@@ -316,8 +312,6 @@ void Image::removeData() {
 }
 
 void Image::setPixel(unsigned int x, unsigned int y, const Vector4f& value) {
-//	x %= size.x;
-//	y %= size.y;
 	if (x >= size.x) {
 		return;
 	}
@@ -377,7 +371,6 @@ Vector4f Image::getPixel(unsigned int x, unsigned int y) const {
 	y %= size.y;
 	
 	const unsigned int pixelIndex = (y * size.x + x) * getPixelSize();
-	float k;
 	
 	switch (pixelFormat) {
 	case Image::EPF_L8 :
@@ -437,16 +430,4 @@ Vector4f Image::getPixelByUV(const Vector2f& uv) const {
 
 Vector4f Image::operator()(const Vector2f& uv) const {
 	return getPixelByUV(uv);
-}
-
-void Image::removeAlpha() {
-	if (pixelFormat != Image::EPF_R8G8B8A8) {
-		return;
-	}
-	
-	unsigned int pixelCount = size.x * size.y;
-	unsigned int byteCount = pixelCount * 3;
-	unsigned char* data = new unsigned char[byteCount];
-		
-	pixelFormat = Image::EPF_R8G8B8;
 }

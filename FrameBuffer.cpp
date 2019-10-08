@@ -19,7 +19,7 @@ const char* const FrameBuffer::ErrorText[] = {
 };
 
 FrameBuffer::FrameBuffer() 
-	: bpp(0), buffer(NULL), fileDescriptor(-1) {
+	: bpp(0), fileDescriptor(-1), buffer(NULL) {
 }
 	
 FrameBuffer::~FrameBuffer() {
@@ -119,25 +119,9 @@ void FrameBuffer::draw(const Image* image) {
 
 	const unsigned int visualLineLength = size.x * (bpp / 8);
 
-	unsigned char lineData[visualLineLength];
-	unsigned char* src = lineData;
-
 	for (unsigned int index = 0; index < size.y; ++index) {
-#if 1
-		memcpy(
-			buffer + index * fixInfo.line_length, 
+		memcpy(buffer + index * fixInfo.line_length, 
 			image->getData() + index * visualLineLength, 
 			visualLineLength);
-#elif 1
-		const float proc = (float)index / (float)size.y;
-		unsigned char data = (unsigned char)(255.0f * proc);
-		memset(lineData, data, visualLineLength);
-		memcpy(
-			buffer + index * fixInfo.line_length, 
-			src, 
-			visualLineLength);
-#else
-		memset(buffer + index * fixInfo.line_length, index % 600, visualLineLength);
-#endif
 	}
 }
