@@ -4,6 +4,7 @@
 #include "Vector.h"
 
 class Image {
+protected:
 	union {
 		unsigned char* data;
 		float* fdata;
@@ -11,6 +12,9 @@ class Image {
 	Vector2u size;
 	int pixelFormat;
 
+	// Make the copy operation illegal
+	Image(const Image& other){}
+	Image& operator = (const Image& other) {return *this;}
 public:
 	enum PixelFormat {
 		EPF_L8,		// 8,  Luminance
@@ -23,13 +27,13 @@ public:
 
 	Image();
 
-	~Image();
+	virtual ~Image();
 	
 	void create(const Vector2u& size, int pixelFormat);
 	
 	const unsigned char* getData() const;
 
-	unsigned int getDataSize() const;
+	unsigned int getDataLength() const;
 
 	Vector2u getSize() const;
 
@@ -39,13 +43,7 @@ public:
 
 	bool hasAlpha() const;
 
-	unsigned int getPixelCount() const;
-
 	bool load(const char* filename);
-
-	void set(unsigned char* data, const Vector2u& size, int pixelFormat);
-
-	void fill(const Vector2u size, PixelFormat pixelFomar, const Vector4f& color);
 
 	void flipVertical();
 
@@ -57,17 +55,11 @@ public:
 
 	void removeData();
 	
-	void setPixel(const unsigned int x, const unsigned int y, const Vector4f& value);
+	virtual void setPixel(const unsigned int x, const unsigned int y, const Vector4f& value);
 	
-	Vector4f getPixel(unsigned int x, unsigned int y) const;
+	virtual Vector4f getPixel(unsigned int x, unsigned int y) const;
 
 	Vector4f getPixelByUV(const Vector2f& uv) const;
-
-	Vector4f operator()(const Vector2f& uv) const;
-
-	void blur(int value);
-
-	void generateNoise();
 };
 
 #endif // __IMAGE_H__

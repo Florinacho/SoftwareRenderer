@@ -109,30 +109,30 @@ public:
 	}
 
 	void setIdentity() {
-		m[ 0] = (T)1.0;
-		m[ 1] = (T)0.0;
-		m[ 2] = (T)0.0;
-		m[ 3] = (T)0.0;
-		m[ 4] = (T)0.0;
-		m[ 5] = (T)1.0;
-		m[ 6] = (T)0.0;
-		m[ 7] = (T)0.0;
-		m[ 8] = (T)0.0;
-		m[ 9] = (T)0.0;
-		m[10] = (T)1.0;
-		m[11] = (T)0.0;
-		m[12] = (T)0.0;
-		m[13] = (T)0.0;
-		m[14] = (T)0.0;
-		m[15] = (T)1.0;
+		m[ 0] = (T)1;
+		m[ 1] = (T)0;
+		m[ 2] = (T)0;
+		m[ 3] = (T)0;
+		m[ 4] = (T)0;
+		m[ 5] = (T)1;
+		m[ 6] = (T)0;
+		m[ 7] = (T)0;
+		m[ 8] = (T)0;
+		m[ 9] = (T)0;
+		m[10] = (T)1;
+		m[11] = (T)0;
+		m[12] = (T)0;
+		m[13] = (T)0;
+		m[14] = (T)0;
+		m[15] = (T)1;
 	}
 
 	static const Matrix4<T>& GetIdentity() {
 		static const Matrix4<T> identity(
-			(T)1.0, (T)0.0, (T)0.0, (T)0.0, 
-			(T)0.0, (T)1.0, (T)0.0, (T)0.0, 
-			(T)0.0, (T)0.0, (T)1.0, (T)0.0, 
-			(T)0.0, (T)0.0, (T)0.0, (T)1.0);
+			(T)1, (T)0, (T)0, (T)0, 
+			(T)0, (T)1, (T)0, (T)0, 
+			(T)0, (T)0, (T)1, (T)0, 
+			(T)0, (T)0, (T)0, (T)1);
 		return identity;
 	}
 
@@ -297,14 +297,17 @@ public:
 		m[ 1] = (T)0;
 		m[ 2] = (T)0;
 		m[ 3] = (T)0;
+
 		m[ 4] = (T)0;
 		m[ 5] = (T)2 / tmb;
 		m[ 6] = (T)0;
 		m[ 7] = (T)0;
+
 		m[ 8] = (T)0;
 		m[ 9] = (T)0;
 		m[10] =-(T)2 / fmn;
 		m[11] = (T)0;
+
 		m[12] =-(right + left) / rml;
 		m[13] =-(top + bottom) / tmb;
 		m[14] =-(zfar + znear) / fmn;
@@ -320,14 +323,17 @@ public:
 		m[ 1] = (T)0;
 		m[ 2] = (T)0;
 		m[ 3] = (T)0;
+
 		m[ 4] = (T)0;
 		m[ 5] = (T)k0 / k2;
 		m[ 6] = (T)0;
 		m[ 7] = (T)0;
+
 		m[ 8] = (T)(right + left) / k1;
 		m[ 9] = (T)(top + bottom) / k2;
 		m[10] =-(T)(zFar + zNear) / k3;
 		m[11] =-(T)1;
+
 		m[12] = (T)0;
 		m[13] = (T)0;
 		m[14] =-(T)(k0 * zFar) / k3;
@@ -349,14 +355,17 @@ public:
 		m[ 1] = (T)yaxis.x;
 		m[ 2] = (T)zaxis.x;
 		m[ 3] = (T)0;
+
 		m[ 4] = (T)xaxis.y;
 		m[ 5] = (T)yaxis.y;
 		m[ 6] = (T)zaxis.y;
 		m[ 7] = (T)0;
+
 		m[ 8] = (T)xaxis.z;
 		m[ 9] = (T)yaxis.z;
 		m[10] = (T)zaxis.z;
 		m[11] = (T)0;
+
 		m[12] =-(T)xaxis.dot(position);
 		m[13] =-(T)yaxis.dot(position);
 		m[14] =-(T)zaxis.dot(position);
@@ -368,21 +377,21 @@ public:
 		m[ 1] = (T)0;
 		m[ 2] = (T)0;
 		m[ 3] = (T)0;
+
 		m[ 4] = (T)0;
 		m[ 5] = (T)(w - y) / (T)2;
 		m[ 6] = (T)0;
 		m[ 7] = (T)0;
+
 		m[ 8] = (T)0;
 		m[ 9] = (T)0;
 		m[10] = (T)(T)1 / (T)2;
 		m[11] = (T)0;
-		m[12] = (T)0;
-		m[13] = (T)0;
-		m[14] = (T)0;
-		m[15] = (T)1;
+
 		m[12] = (z + x) / 2.0f;
 		m[13] = (y + w) / 2.0f;
 		m[14] = (T)0.5f;
+		m[15] = (T)1;
 	}
 
 	void setScale(const Vector3<T>& value) {
@@ -390,14 +399,17 @@ public:
 		m[ 1] = (T)0;
 		m[ 2] = (T)0;
 		m[ 3] = (T)0;
+
 		m[ 4] = (T)0;
 		m[ 5] = (T)value.y;
 		m[ 6] = (T)0;
 		m[ 7] = (T)0;
+
 		m[ 8] = (T)0;
 		m[ 9] = (T)0;
 		m[10] = (T)value.z;
 		m[11] = (T)0;
+
 		m[12] = (T)0;
 		m[13] = (T)0;
 		m[14] = (T)0;
@@ -409,14 +421,17 @@ public:
 		m[ 1] = (T)0;
 		m[ 2] = (T)0;
 		m[ 3] = (T)0;
+
 		m[ 4] = (T)0;
 		m[ 5] = (T)1;
 		m[ 6] = (T)0;
 		m[ 7] = (T)0;
+
 		m[ 8] = (T)0;
 		m[ 9] = (T)0;
 		m[10] = (T)1;
 		m[11] = (T)0;
+
 		m[12] = (T)translation.x;
 		m[13] = (T)translation.y;
 		m[14] = (T)translation.z;
@@ -424,18 +439,24 @@ public:
 	}
 
 	void setRotationX(const float value) {
+		const float s = sin(value);
+		const float c = cos(value);
+
 		m[ 0] = (T)1;
 		m[ 1] = (T)0;
 		m[ 2] = (T)0;
 		m[ 3] = (T)0;
+
 		m[ 4] = (T)0;
-		m[ 5] = (T)cos(value);
-		m[ 6] = (T)sin(value);
+		m[ 5] = (T)c;
+		m[ 6] = (T)s;
 		m[ 7] = (T)0;
+
 		m[ 8] = (T)0;
-		m[ 9] = (T)-sin(value);
-		m[10] = (T)cos(value);
+		m[ 9] = (T)-s;
+		m[10] = (T)c;
 		m[11] = (T)0;
+
 		m[12] = (T)0;
 		m[13] = (T)0;
 		m[14] = (T)0;
@@ -443,18 +464,24 @@ public:
 	}
 
 	void setRotationY(const float value) {
-		m[ 0] = (T)cos(value);
+		const float s = sin(value);
+		const float c = cos(value);
+
+		m[ 0] = (T)c;
 		m[ 1] = (T)0;
-		m[ 2] = (T)-sin(value);
+		m[ 2] = (T)-s;
 		m[ 3] = (T)0;
+
 		m[ 4] = (T)0;
 		m[ 5] = (T)1;
 		m[ 6] = (T)0;
 		m[ 7] = (T)0;
-		m[ 8] = (T)sin(value);
+
+		m[ 8] = (T)s;
 		m[ 9] = (T)0;
-		m[10] = (T)cos(value);
+		m[10] = (T)c;
 		m[11] = (T)0;
+
 		m[12] = (T)0;
 		m[13] = (T)0;
 		m[14] = (T)0;
@@ -462,21 +489,86 @@ public:
 	}
 
 	void setRotationZ(const float value) {
-		m[ 0] = (T)cos(value);
-		m[ 1] = (T)sin(value);
+		const float s = sin(value);
+		const float c = cos(value);
+
+		m[ 0] = (T)c;
+		m[ 1] = (T)s;
 		m[ 2] = (T)0;
 		m[ 3] = (T)0;
-		m[ 4] = (T)-sin(value);
-		m[ 5] = (T)cos(value);
+
+		m[ 4] = (T)-s;
+		m[ 5] = (T)c;
 		m[ 6] = (T)0;
 		m[ 7] = (T)0;
+
 		m[ 8] = (T)0;
 		m[ 9] = (T)0;
 		m[10] = (T)1;
 		m[11] = (T)0;
+
 		m[12] = (T)0;
 		m[13] = (T)0;
 		m[14] = (T)0;
+		m[15] = (T)1;
+	}
+	//http://www.songho.ca/opengl/gl_anglestoaxes.html
+	// This usses the ZXY multiplication order
+	void setRotation(const Vector3<T>& value) {
+		const float sA = sin(value.x);
+		const float cA = cos(value.x);
+		const float sB = sin(value.y);
+		const float cB = cos(value.y);
+		const float sC = sin(value.z);
+		const float cC = cos(value.z);
+
+		m[ 0] = cC * cB - sC * sA * sB;
+		m[ 1] = sC * cB + cC * sA * sB;
+		m[ 2] = -cA * sB ;
+		m[ 3] = (T)0;
+
+		m[ 4] =-sC * cA;
+		m[ 5] = cC * cA;
+		m[ 6] = sA;
+		m[ 7] = (T)0;
+
+		m[ 8] = cC * sB + sC * sA * cB;
+		m[ 9] = sC * sB - cC * sA * cB;
+		m[10] = cA * cB;
+		m[11] = (T)0;
+
+		m[12] = (T)0;
+		m[13] = (T)0;
+		m[14] = (T)0;
+		m[15] = (T)1;
+	}
+
+	void setTransformation(const Vector3<T>& position, const Vector3<T>& rotation, const Vector3<T>& scale) {
+		const float sA = sin(deg2rad(rotation.x));
+		const float cA = cos(deg2rad(rotation.x));
+		const float sB = sin(deg2rad(rotation.y));
+		const float cB = cos(deg2rad(rotation.y));
+		const float sC = sin(deg2rad(rotation.z));
+		const float cC = cos(deg2rad(rotation.z));
+
+		m[ 0] = scale.x * (cC * cB - sC * sA * sB);
+		m[ 1] = scale.x * (sC * cB + cC * sA * sB);
+		m[ 2] = scale.x * (-cA * sB);
+		m[ 3] = (T)0;
+
+		m[ 4] = scale.y * (-sC * cA);
+		m[ 5] = scale.y * ( cC * cA);
+		m[ 6] = scale.y * sA;
+		m[ 7] = (T)0;
+
+		m[ 8] = scale.z * (cC * sB + sC * sA * cB);
+		m[ 9] = scale.z * (sC * sB - cC * sA * cB);
+		m[10] = scale.z * (cA * cB);
+		m[11] = (T)0;
+
+		m[12] = (T)position.x;
+		m[13] = (T)position.y;
+		m[14] = (T)position.z;
 		m[15] = (T)1;
 	}
 };

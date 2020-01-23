@@ -340,7 +340,15 @@ struct Vector4 {
 		: x(nx), y(ny), z(nz), w(nw) {
 	}
 
-	Vector4<T>(const Vector3<T>& other, const T valueW)
+	Vector4<T>(const Vector2<T>& other, const T valueZ = (T)0, const T valueW = (T)0)
+		: x(other.x), y(other.y), z(valueZ), w(valueW) {
+	}
+
+	Vector4<T>(const Vector2<T>& a, const Vector2<T>& b)
+		: x(a.x), y(a.y), z(b.x), w(b.y) {
+	}
+
+	Vector4<T>(const Vector3<T>& other, const T valueW = (T)0)
 		: x(other.x), y(other.y), z(other.z), w(valueW) {
 	}
 

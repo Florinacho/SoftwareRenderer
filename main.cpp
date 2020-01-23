@@ -1,6 +1,6 @@
 #include <stdio.h>
 
-#include "Graphics.h"
+#include "Renderer.h"
 #include "CubeMesh.h"
 
 const Vector2u screenSize(800, 600);
@@ -21,35 +21,46 @@ struct Camera {
 
 	mat4 view;
 	mat4 projection;
+	mat4 viewProjection;
 
 	bool viewDirty;
 	bool projectionDirty;
+	bool viewProjectionDirty;
 
 	Camera() {
 		position = vec3( 0.0f, 0.0f, 0.0f);
 		rotation = vec3( 0.0f, 0.0f, 0.0f);
 		scale    = vec3( 1.0f, 1.0f, 1.0f);
-		target   = vec3( 0.0f, 0.0f,-1.0f);
+		target   = vec3( 0.0f, 0.0f,-50.0f);
 		up       = vec3( 0.0f, 1.0f, 0.0f);
 
 		fieldOfView = 75.0f;
-		aspectRatio = (float)screenSize.x / (float)screenSize.y;
 		zNear = 0.1f;
 		zFar = 300.0f;
 
+		aspectRatio = (float)screenSize.x / (float)screenSize.y;
+
 		viewDirty = true;
 		projectionDirty = true;
+		viewProjectionDirty = false;
 	}
 
 	void update() {
 		if (viewDirty == true) {
 			view.setCameraLookAtTransformation(position, target, up);
 			viewDirty = false;
+			viewProjectionDirty = true;
 		}
 
 		if (projectionDirty == true) {
 			projection.setPerspective(fieldOfView, aspectRatio, zNear, zFar);
 			projectionDirty = false;
+			viewProjectionDirty = true;
+		}
+
+		if (viewProjectionDirty == true) {
+			viewProjection = projection * view;
+			viewProjectionDirty = false;
 		}
 	}
 } camera;
@@ -76,48 +87,36 @@ struct Mesh {
 		alphaBlend = false;
 	}
 
-	void draw(Graphics* graphics) {
-		graphics->setActiveTexture(0, texture);
+	void draw(Renderer* renderer) {
+		renderer->setActiveTexture(0, texture);
 
-		graphics->setVertexShaderCallback(VertexShader);
-		graphics->setPixelShaderCallback(PixelShader);
+		renderer->setFlag(Renderer::ERF_DEPTH_TEST, true);
+		renderer->setFlag(Renderer::ERF_DEPTH_MASK, true);
+		renderer->setFlag(Renderer::ERF_ALPHA_BLEND, alphaBlend);
 
-		graphics->setFlag(Graphics::ERT_DEPTH_TEST, true);
-		graphics->setFlag(Graphics::ERT_DEPTH_MASK, true);
-		graphics->setFlag(Graphics::ERT_ALPHA_BLEND, alphaBlend);
+		renderer->setVertexShaderCallback(VertexShader);
+		renderer->setPixelShaderCallback(PixelShader);
 
-		{
-		mat4 translationMatrix;
-		mat4 rotationXMatrix, rotationYMatrix, rotationZMatrix;
-		mat4 scaleMatrix;
-		mat4 modelViewProjection;
+		model.setTransformation(position, rotation, scale);
 
-		translationMatrix.setTranslation(vec4(position.x, position.y, position.z, 1.0f));
-		rotationXMatrix.setRotationX(deg2rad(rotation.x));
-		rotationYMatrix.setRotationY(deg2rad(rotation.y));
-		rotationZMatrix.setRotationZ(deg2rad(rotation.z));
-		scaleMatrix.setScale(scale);
+		const mat4 modelViewProjection = camera.viewProjection * model;
 
-		model = translationMatrix * rotationZMatrix * rotationYMatrix * rotationXMatrix * scaleMatrix;
-		modelViewProjection = camera.projection * camera.view * model;
+		renderer->setShaderUniform(&modelViewProjection);
 
-		graphics->setShaderUniform(&modelViewProjection);
-		}
-
-		graphics->drawPrimitive(Graphics::EPT_TRIANGLES, CubeVertices, CubeVerticesCount);
+		renderer->drawPrimitive(Renderer::EPT_TRIANGLES, CubeVertices, CubeVerticesCount);
 	}
 
-	static void VertexShader(VertexShaderData& vertex, void* uniform) {
-		if (uniform == NULL) {
+	static void VertexShader(VertexShaderData& vertex) {
+		if (vertex.uniform == NULL) {
 			return;
 		}
 
-		const mat4 modelViewProjection = *reinterpret_cast<const mat4*>(uniform);
+		const mat4 modelViewProjection = *reinterpret_cast<const mat4*>(vertex.uniform);
 
 		vertex.position = modelViewProjection * vertex.position;
 	}
 
-	static void PixelShader(PixelShaderData& pixel, void* uniform) {
+	static void PixelShader(PixelShaderData& pixel) {
 		if (pixel.texture[0] == NULL) {
 			return;
 		}
@@ -128,22 +127,29 @@ struct Mesh {
 
 int main() {
 	FrameBuffer frameBuffer;
-	Graphics graphics;
-	Mesh mesh;
+	Renderer renderer;
+	RenderTarget renderTarget;
+	Image colorBuffer;
+	Image depthBuffer;
 	Image image;
+	Mesh mesh;
 	int status;
 
-	status = frameBuffer.initialize(screenSize.x, screenSize.y, 32);
+	status = frameBuffer.initialize("/dev/fb0", screenSize, Image::EPF_R8G8B8A8);
 	if (status != FrameBuffer::ERR_NO_ERROR) {
 		printf("Failed to initialize frame buffer.\nError: %s\n", 
 			FrameBuffer::ErrorText[status]);
 		return 1;
 	}
-	
-	if (graphics.initialize(&frameBuffer, Image::EPF_DEPTH) == false) {
-		printf("Failed to initialize graphics!\n");
-		return 2;
-	}
+
+	colorBuffer.create(screenSize, frameBuffer.getPixelFormat());
+	depthBuffer.create(screenSize, Image::EPF_R8G8B8A8);
+
+	renderTarget.setBuffer(RenderTarget::ERT_COLOR_0, &colorBuffer);
+	renderTarget.setBuffer(RenderTarget::ERT_DEPTH, &depthBuffer);
+
+	renderer.setRenderTarget(&renderTarget);
+	renderer.setViewport(viewport);
 
 	if (image.load("tex_test.tga") == false) {
 		printf("Failed to load image.\n");
@@ -153,16 +159,16 @@ int main() {
 	mesh.texture = &image;
 
 	while (true) {
-		graphics.clear();
+		renderer.clear(false, true);
 
-		graphics.draw2DImage(&image, viewport, vec4(1.0f, 1.0f, 1.0f, 1.0f));
+		renderer.draw2DImage(&image, viewport);
 
 		camera.update();
 
 		mesh.rotation += vec3(0.33f, 0.66f, 0.99f);
-		mesh.draw(&graphics);
+		mesh.draw(&renderer);
 
-		graphics.swap();
+		frameBuffer.draw(&colorBuffer);
 	}
 
 	return 0;

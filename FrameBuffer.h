@@ -1,21 +1,15 @@
-#ifndef __RBP_FRAME_BUFFER_H__
-#define __RBP_FRAME_BUFFER_H__
+#ifndef __FRAME_BUFFER_H__
+#define __FRAME_BUFFER_H__
 
 #include <linux/fb.h>
-#include "Vector.h"
+#include "Image.h"
 
 class Image;
 
-class FrameBuffer {
-	Vector2u size;
-	unsigned int bpp;
-
+class FrameBuffer : public Image {
 	int fileDescriptor;
 	fb_var_screeninfo varInfo;
 	fb_fix_screeninfo fixInfo;
-
-	unsigned char* buffer;	
-	unsigned int screenSize;
 
 public:
 	enum ErrorCode {
@@ -34,17 +28,15 @@ public:
 	
 	~FrameBuffer();
 	
-	int initialize(int width, int height, int bitsPerPixel);
+	int initialize(const char* filename, const Vector2u& size, int pixelFormat);
 	
 	void uninitialize();
 	
-	Vector2u getSize() const;
-
-	unsigned int getBitsPerPixel() const;
-
-	unsigned int getBytesPerPixel() const;
-
 	void draw(const Image* image);
+
+	void setPixel(unsigned int x, unsigned int y, const Vector4f& value);
+	
+	Vector4f getPixel(unsigned int x, unsigned int y);
 };
 
 #endif // __RBP_FRAME_BUFFER_H__

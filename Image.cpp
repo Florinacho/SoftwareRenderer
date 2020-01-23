@@ -2,7 +2,48 @@
 #include <string.h>
 
 #include "Image.h"
-#include "TGA.h"
+
+namespace tga {
+
+enum ImageType {
+	NO_IMAGE_DATA = 0,
+	COLOR_MAP = 1,			//UNCOMPRESSED
+	TRUE_COLOR = 2,			//UNCOMPRESSED
+	GRAYSCALE = 3,			//UNCOMPRESSED
+	RLE_COLOR_MAP = 9,		//COMPRESSED
+	RLE_TRUE_COLOR = 10,		//COMPRESSED
+	RLE_GRAYSCALE = 11		//COMPRESSED
+};
+
+#pragma pack(push, 1)
+struct Header {
+	unsigned char length;
+	unsigned char colorMapType;
+	unsigned char compression;
+	unsigned short colorMapOffset;
+	unsigned short colorMapLength;
+	unsigned char colorMapDepth;
+	unsigned short xOrigin;
+	unsigned short yOrigin;
+	unsigned short width;
+	unsigned short height;
+	unsigned char depth;
+	unsigned char descriptor;
+};
+
+struct Footer {
+	unsigned int extensionOffset;
+	unsigned int developerAreaOffset;
+	char signature[18];
+};
+
+#pragma pack(pop)
+static const unsigned int HeaderSize = sizeof(Header);
+static const unsigned int FooterSize = sizeof(Footer);
+static const char* FooterSignature = "TRUEVISION-XFILE.";
+static const unsigned int FooterSignatureLength = 18;
+
+} // namespace tga
 
 struct __attribute__((packed)) Pixel8 {
 	unsigned int red : 3;
@@ -18,7 +59,8 @@ struct __attribute__((packed)) Pixel16 {
 
 Image::Image() {
 	data = NULL;
-	size = Vector2u(0, 0);
+	size.x = 0;
+	size.y = 0;
 	pixelFormat = Image::EPF_L8;
 }
 
@@ -35,23 +77,16 @@ void Image::create(const Vector2u& insize, int inpixelFormat) {
 	const unsigned int pixelCount = size.x * size.y;
 	const unsigned int pixelSize = getPixelSize();
 	const unsigned int totalPixelSize = pixelCount * pixelSize;
-	switch (inpixelFormat) {
-	case Image::EPF_DEPTH :
-		fdata = new float[pixelCount];
-		memset(fdata, 0, pixelCount);
-		break;
-	default :
-		data = new unsigned char[totalPixelSize];
-		memset(data, 0, totalPixelSize);
-		break;
-	}
+
+	data = new unsigned char[totalPixelSize];
+	memset(data, 0, totalPixelSize);
 }
 
 const unsigned char* Image::getData() const {
 	return data;
 }
 
-unsigned int Image::getDataSize() const {
+unsigned int Image::getDataLength() const {
 	return size.x * size.y * getPixelSize();
 }
 
@@ -81,19 +116,10 @@ unsigned int Image::getPixelSize() const {
 
 bool Image::hasAlpha() const {
 	switch (pixelFormat) {
-	case Image::EPF_L8 :
-	case Image::EPF_R8G8B8 :
-	case Image::EPF_R5G6B5 :
-	case Image::EPF_DEPTH :
-		return false;
 	case Image::EPF_R8G8B8A8 :
 		return true;
 	}
 	return false;
-}
-
-unsigned int Image::getPixelCount() const {
-	return (size.x * size.y);
 }
 
 bool Image::load(const char* filename) {
@@ -216,45 +242,6 @@ bool Image::load(const char* filename) {
 	return true;
 }
 
-void Image::set(unsigned char* indata, const Vector2u& insize, int pixelFormat) {
-	clear();
-	data = indata;
-	size = insize;
-	pixelFormat = pixelFormat;
-}
-
-void Image::fill(const Vector2u insize, PixelFormat pixelFormat, const Vector4f& color) {
-	clear();
-	size = insize;
-	pixelFormat = pixelFormat;
-
-	const unsigned int pixelCount = getPixelCount();
-	const unsigned int pixelSize = getPixelSize();
-	const unsigned int totalPixelSize = pixelCount * pixelSize;
-
-	unsigned char pixelData[4];
-	pixelData[0] = color.x * 255;
-	pixelData[1] = color.y * 255;
-	pixelData[2] = color.z * 255;
-	pixelData[3] = color.w * 255;	
-
-
-	printf("%s::%d: Warning! not implemented yet.\n", __FILE__, __LINE__);
-	return;
-
-	data = new unsigned char[totalPixelSize];
-	for (unsigned int index = 0; index < pixelCount; ++index) {
-		unsigned char* pointer = data + index * pixelSize;
-		switch (pixelFormat) {
-		case Image::EPF_L8 :
-			memcpy(pointer, pixelData, pixelSize);
-			break;
-		default :
-			;
-		}
-	}
-}
-
 void Image::flipVertical() {
 	const unsigned int pixelSize = getPixelSize();
 	unsigned char tmp[8];
@@ -294,7 +281,7 @@ void Image::flipHorizontal() {
 }
 
 void Image::clearColor() {
-	memset(data, 0, getPixelCount() * getPixelSize());
+	memset(data, 0, getDataLength());
 }
 
 void Image::clear() {
@@ -312,6 +299,14 @@ void Image::removeData() {
 }
 
 void Image::setPixel(unsigned int x, unsigned int y, const Vector4f& value) {
+	union {
+		Pixel16 pixel16;
+		struct {
+			unsigned char ub0;
+			unsigned char ub1;
+		} raw;
+	};
+
 	if (x >= size.x) {
 		return;
 	}
@@ -330,22 +325,13 @@ void Image::setPixel(unsigned int x, unsigned int y, const Vector4f& value) {
 	case Image::EPF_L8 :
 		data[pixelIndex + 0] = red;
 		break;
-	case Image::EPF_R5G6B5 :	// EPF_R5G6B5
-		{
-		union {
-			Pixel16 pixel;
-			struct {
-				unsigned char ub0;
-				unsigned char ub1;
-			} raw;
-		};
-		pixel.red = (unsigned char)(value.z * 31.0f);
-		pixel.green = (unsigned char)(value.y * 63.0f);
-		pixel.blue = (unsigned char)(value.x * 31.0f);
+	case Image::EPF_R5G6B5 :
+		pixel16.red = (unsigned char)(value.z * 31.0f);
+		pixel16.green = (unsigned char)(value.y * 63.0f);
+		pixel16.blue = (unsigned char)(value.x * 31.0f);
 
 		data[pixelIndex + 0] = raw.ub0;
 		data[pixelIndex + 1] = raw.ub1;
-		}
 		break;
 	case Image::EPF_R8G8B8 :
 		data[pixelIndex + 0] = blue;
@@ -366,6 +352,13 @@ void Image::setPixel(unsigned int x, unsigned int y, const Vector4f& value) {
 	
 Vector4f Image::getPixel(unsigned int x, unsigned int y) const {
 	Vector4f ans;
+	union {
+		Pixel16 pixel16;
+		struct {
+			unsigned char ub0;
+			unsigned char ub1;
+		} raw;
+	};
 
 	x %= size.x;
 	y %= size.y;
@@ -375,27 +368,18 @@ Vector4f Image::getPixel(unsigned int x, unsigned int y) const {
 	switch (pixelFormat) {
 	case Image::EPF_L8 :
 		ans.x = (float)data[pixelIndex + 0] / 255.0f;
-		ans.y = ans.x;		// drawing depth buffer
+		ans.y = ans.x;
 		ans.z = ans.x;
 		ans.w = 1.0f;
 		break;
 	case Image::EPF_R5G6B5 :
-		{
-		union {
-			Pixel16 pixel;
-			struct {
-				unsigned char ub0;
-				unsigned char ub1;
-			} raw;
-		};
-
 		raw.ub0 = data[pixelIndex + 0];
 		raw.ub1 = data[pixelIndex + 1];
-		ans.x = (float)pixel.red / 63.0f;
-		ans.y = (float)pixel.green / 127.0f;
-		ans.z = (float)pixel.blue / 63.0f;
-		ans.w = 1.0f; //(float)pixel.alpha / 63.0f;
-		}
+
+		ans.x = (float)pixel16.red / 63.0f;
+		ans.y = (float)pixel16.green / 127.0f;
+		ans.z = (float)pixel16.blue / 63.0f;
+		ans.w = 1.0f;
 		break;
 	case Image::EPF_R8G8B8 :
 		ans.x = (float)data[pixelIndex + 0] / 255.0f;
@@ -411,7 +395,6 @@ Vector4f Image::getPixel(unsigned int x, unsigned int y) const {
 		break;
 	case Image::EPF_DEPTH :
 		ans.x = fdata[y * size.x + x];
-//		ans.x = 300.0f * (0.1f + ans.x) / ((300.0f - 0.1f) * ans.x);
 		ans.y = ans.x;
 		ans.z = ans.x;
 		ans.w = 1.0f;
@@ -422,12 +405,5 @@ Vector4f Image::getPixel(unsigned int x, unsigned int y) const {
 }
 
 Vector4f Image::getPixelByUV(const Vector2f& uv) const {
-	float width = (float)size.x;
-	float height = (float)size.y;
-
-	return getPixel((unsigned int)width * uv.x, (unsigned int)height * uv.y);
-}
-
-Vector4f Image::operator()(const Vector2f& uv) const {
-	return getPixelByUV(uv);
+	return getPixel(uv.x * (float)size.x, uv.y * (float)size.y);
 }

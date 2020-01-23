@@ -11,6 +11,18 @@ struct Vertex {
 
 	Vertex() {
 	}
+
+	Vertex(const Vector3f& nposition)
+		: position(nposition) {
+	}
+
+	Vertex(const Vector3f& nposition, const Vector2f& ntextureCoords)
+		: position(nposition), textureCoords(ntextureCoords) {
+	}
+
+	Vertex(const Vector3f& nposition, const Vector4f& ncolor)
+		: position(nposition), color(ncolor) {
+	}
 	
 	Vertex(const Vector3f& nposition, const Vector2f& ntextureCoords, const Vector4f& ncolor)
 		: position(nposition), textureCoords(ntextureCoords), color(ncolor) {

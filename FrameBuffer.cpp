@@ -2,9 +2,9 @@
 #include <sys/mman.h>
 #include <string.h>
 
-#include <fcntl.h> // for open
-#include <unistd.h> // for close
-#include <sys/ioctl.h> // for ioctl
+#include <fcntl.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 
 #include "FrameBuffer.h"
 #include "Image.h"
@@ -19,17 +19,17 @@ const char* const FrameBuffer::ErrorText[] = {
 };
 
 FrameBuffer::FrameBuffer() 
-	: bpp(0), fileDescriptor(-1), buffer(NULL) {
+	: fileDescriptor(-1) {
 }
 	
 FrameBuffer::~FrameBuffer() {
 	uninitialize();
 }
 	
-int FrameBuffer::initialize(int width, int height, int bitsPerPixel) {
+int FrameBuffer::initialize(const char* filename, const Vector2u& nsize, int npixelFormat) {
 	uninitialize();
 	
-	fileDescriptor = open("/dev/fb0", O_RDWR, 777);
+	fileDescriptor = open(((filename == NULL) ? "/dev/fb0" : filename), O_RDWR, 777);
 	if (fileDescriptor == -1) {
 		return ERR_CANNOT_OPEN_FILE;
 	}
@@ -42,31 +42,36 @@ int FrameBuffer::initialize(int width, int height, int bitsPerPixel) {
 		return ERR_CANNOT_READ_VAR_INFO;
 	}
 
-	varInfo.xres = width;
-	varInfo.yres = height;
+	varInfo.xres = nsize.x;
+	varInfo.yres = nsize.y;
 	varInfo.xres_virtual = varInfo.xres;
 	varInfo.yres_virtual = varInfo.yres;
 
-	varInfo.bits_per_pixel = bitsPerPixel;
+	switch (npixelFormat) {
+	case EPF_R8G8B8 :
+		varInfo.bits_per_pixel = 24;
+		break;
+	case EPF_R8G8B8A8 :
+		varInfo.bits_per_pixel = 32;
+		break;
+	default :
+		return 1;
+	}
 
-	printf("fixInfo.mmio_len = %d\n", fixInfo.mmio_len);
 	if (fixInfo.mmio_len != 0) {
-		printf("Internal error! mmio_len = %d\n", fixInfo.mmio_len);
+		printf("%s::%d: Internal error! mmio_len = %d\n", __FILE__, __LINE__, fixInfo.mmio_len);
+		return 1;
 	}
 	
 	if (ioctl(fileDescriptor, FBIOPUT_VSCREENINFO, &varInfo) != 0) {
 		return ERR_CANNOT_WRITE_VAR_INFO;
 	}
 
-	size.x = width;
-	size.y = height;
-	bpp = bitsPerPixel;
+	size = nsize;
+	pixelFormat = npixelFormat;
 
-//	screenSize = varInfo.xres * varInfo.yres * (varInfo.bits_per_pixel >> 3);
-	screenSize = fixInfo.smem_len;
-
-	buffer = (unsigned char*)mmap(NULL, fixInfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, fileDescriptor, 0);
-	if (buffer == (void*)-1) {
+	data = (unsigned char*)mmap(NULL, fixInfo.smem_len, PROT_READ | PROT_WRITE, MAP_SHARED, fileDescriptor, 0);
+	if (data == (void*)-1) {
 		return ERR_CANNOT_MAP_MEMORY;
 	}
 
@@ -78,25 +83,13 @@ void FrameBuffer::uninitialize() {
 		return;
 	}
 	
-	munmap(buffer, fixInfo.smem_len);
+	munmap(data, fixInfo.smem_len);
+	data = NULL;
 	close(fileDescriptor);
 	
 	fileDescriptor = -1;
 	size.x = 0;
 	size.y = 0;
-	bpp = 0;
-}
-
-Vector2u FrameBuffer::getSize() const {
-	return size;
-}
-
-unsigned int FrameBuffer::getBitsPerPixel() const {
-	return bpp;
-}
-
-unsigned int FrameBuffer::getBytesPerPixel() const {
-	return getBitsPerPixel() / 8;
 }
 
 void FrameBuffer::draw(const Image* image) {
@@ -107,21 +100,28 @@ void FrameBuffer::draw(const Image* image) {
 	if (size.x != image->getSize().x) {
 		return;
 	}
+
 	if (size.y != image->getSize().y) {
 		return;
 	}
-	if ((bpp / 8) != image->getPixelSize()) {
-		return;
-	}
-	if (bpp / 8 != 4) {
+
+	if (pixelFormat != image->getPixelFormat()) {
 		return;
 	}
 
-	const unsigned int visualLineLength = size.x * (bpp / 8);
+	const unsigned int visualLineLength = size.x * getPixelSize();
 
 	for (unsigned int index = 0; index < size.y; ++index) {
-		memcpy(buffer + index * fixInfo.line_length, 
+		memcpy(data + index * fixInfo.line_length, 
 			image->getData() + index * visualLineLength, 
 			visualLineLength);
 	}
+}
+
+void FrameBuffer::setPixel(unsigned int x, unsigned int y, const Vector4f& value) {
+}
+
+Vector4f FrameBuffer::getPixel(unsigned int x, unsigned int y) {
+	Vector4f ans;
+	return ans;
 }
