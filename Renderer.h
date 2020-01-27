@@ -8,7 +8,6 @@
 #include "RenderTarget.h"
 
 static const unsigned int MaxTextureCount = 4;
-static const unsigned int MaxRenderTargetCount = 4;
 
 struct VertexShaderData {
 	Vector4f position;
@@ -22,6 +21,7 @@ struct PixelShaderData {
 	const Image* texture[MaxTextureCount];
 	Vector2f uv;
 	Vector4f color;
+//	Vector4f color[RenderTarget::ERT_COUNT];
 	const void* uniform;
 };
 
@@ -99,13 +99,13 @@ public:
 	void setActiveTexture(unsigned int index, const Image* image);
 
 	const Image* getActiveTexture(unsigned int index) const;
-	
-	void clear(bool color = true, bool depth = true);
 
-	void swap();
-
-	void drawPrimitive(const PrimitiveType primitiveType, 
+	void render(const PrimitiveType primitiveType, 
 			const Vertex* vertices, unsigned int vertexCount);
+
+	void render(const PrimitiveType primitiveType, 
+		const Vertex* vertices, const unsigned int vertexCount,
+		const unsigned int* indices, const unsigned int indexCount);
 
 	void draw2DLine(const Vector2f& begin, const Vector2f& end, 
 		const Vector4f& color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f));

@@ -31,12 +31,14 @@ public:
 	int initialize(const char* filename, const Vector2u& size, int pixelFormat);
 	
 	void uninitialize();
+
+	unsigned int getDataLength() const;
 	
 	void draw(const Image* image);
 
 	void setPixel(unsigned int x, unsigned int y, const Vector4f& value);
 	
-	Vector4f getPixel(unsigned int x, unsigned int y);
+	Vector4f getPixel(unsigned int x, unsigned int y) const;
 };
 
 #endif // __RBP_FRAME_BUFFER_H__

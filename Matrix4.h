@@ -288,7 +288,7 @@ public:
 		return m[index];
 	}
 
-	void setOrthogonal(const float left, const float right, const float bottom, const float top, const float znear, const float zfar) {
+	void setOrthogonal(const float left, const float right, const float top, const float bottom, const float znear, const float zfar) {
 		const float rml = right - left;
 		const float tmb = top - bottom;
 		const float fmn = zfar - znear;

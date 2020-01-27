@@ -224,6 +224,7 @@ void Renderer::drawTriangle(
 
 	for (int j = minY; j <= maxY; ++j) {
 		for (int i = minX; i <= maxX; ++i) {
+			int invJ = size.y - j;
 			const Vector4f p((float)i + 0.5f, (float)j + 0.5f, 0.0f, 0.0f);
 			Vector3f weight;
 			if ((weight.x = edgeFunction(vertex[1].position, vertex[2].position, p)) < 0.0f) {
@@ -246,7 +247,7 @@ void Renderer::drawTriangle(
 				continue;
 			}
 
-			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixel(i, j).x) {
+			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixel(i, invJ).x) {
 				continue;
 			}
 
@@ -271,14 +272,14 @@ void Renderer::drawTriangle(
 			} 
 
 			if (renderFlags[ERF_ALPHA_BLEND]) {
-				const Vector4f pixel = colorBufferPtr->getPixel(i, j);
+				const Vector4f pixel = colorBufferPtr->getPixel(i, invJ);
 				const float inv = 1.0f - pixelShaderData.color.w;
 				pixelShaderData.color = pixelShaderData.color * pixelShaderData.color.w + pixel * inv;
 			}
-			colorBufferPtr->setPixel(i, size.y - j, pixelShaderData.color);
+			colorBufferPtr->setPixel(i, invJ, pixelShaderData.color);
 
 			if (renderFlags[ERF_DEPTH_MASK]) {
-				depthBufferPtr->setPixel(i, j, Vector4f(depth, depth, depth, 1.0f));
+				depthBufferPtr->setPixel(i, invJ, Vector4f(depth, depth, depth, 1.0f));
 			}
 		}
 	} 
@@ -330,7 +331,7 @@ void Renderer::setViewport(const Vector4f& value) {
 	viewport = value;
 
 	viewportTransformation.setViewport(viewport.x, viewport.y, viewport.z, viewport.w);
-	orthogonalProjection.setOrthogonal(0.0f, viewport.getWidth(), viewport.getHeight(), 0.0f, 0.0f, 1.0f);
+	orthogonalProjection.setOrthogonal(0.0f, viewport.getWidth(), 0.0f, viewport.getHeight(), 0.0f, 1.0f);
 }
 
 const Vector4f& Renderer::getViewport() const {
@@ -369,20 +370,7 @@ const Image* Renderer::getActiveTexture(const unsigned int index) const {
 	return activeTexture[index];
 }
 
-void Renderer::clear(bool color, bool depth) {
-	if (renderTarget == NULL) {
-		return;
-	}
-
-	if (color) {
-		colorBufferPtr->clearColor();
-	}
-	if (depth) {
-		depthBufferPtr->clearColor();
-	}
-}
-
-void Renderer::drawPrimitive(const PrimitiveType primitiveType, const Vertex* vertices, unsigned int vertexCount) {
+void Renderer::render(const PrimitiveType primitiveType, const Vertex* vertices, const unsigned int vertexCount) {
 	if (renderTarget == NULL) {
 		return;
 	}
@@ -427,6 +415,53 @@ void Renderer::drawPrimitive(const PrimitiveType primitiveType, const Vertex* ve
 	}
 }
 
+void Renderer::render(const PrimitiveType primitiveType, const Vertex* vertices, const unsigned int vertexCount,
+			const unsigned int* indices, const unsigned int indexCount) {
+	if (renderTarget == NULL) {
+		return;
+	}
+
+	switch (primitiveType) {
+	case EPT_LINES :
+		if (indexCount < 2) {
+			return;
+		}
+		for (unsigned int index = 0; index < indexCount - 1; index += 2) {
+			drawLine(
+				vertices[indices[index + 0]].position, vertices[indices[index + 0]].color, 
+				vertices[indices[index + 1]].position, vertices[indices[index + 1]].color);
+		}
+		break;
+	case EPT_LINE_STRIP :
+		for (unsigned int index = 1; index < indexCount; index ++) {
+			drawLine(
+				vertices[indices[index - 1]].position, vertices[indices[index - 1]].color, 
+				vertices[indices[index + 0]].position, vertices[indices[index + 0]].color);
+		}
+		break;
+	case EPT_TRIANGLES :
+		if (indexCount < 3) {
+			return;
+		}
+		for (unsigned int index = 0; index < indexCount - 2; index += 3) {
+			
+			drawTriangle(
+				vertices[indices[index + 0]].position, vertices[indices[index + 0]].textureCoords, vertices[indices[index + 0]].color, 
+				vertices[indices[index + 1]].position, vertices[indices[index + 1]].textureCoords, vertices[indices[index + 1]].color,
+				vertices[indices[index + 2]].position, vertices[indices[index + 2]].textureCoords, vertices[indices[index + 2]].color);
+		}
+		break;
+	case EPT_TRIANGLE_STRIP :
+		for (unsigned int index = 2, k = 1; index < indexCount; ++index, k = !k) {
+			drawTriangle(
+				vertices[indices[index - 0]].position, vertices[indices[index - 0]].textureCoords, vertices[indices[index - 0]].color,
+				vertices[indices[index - (k ? 2 : 1)]].position, vertices[indices[index - (k ? 2 : 1)]].textureCoords, vertices[indices[index - (k ? 2 : 1)]].color,
+				vertices[indices[index - (k ? 1 : 2)]].position, vertices[indices[index - (k ? 1 : 2)]].textureCoords, vertices[indices[index - (k ? 1 : 2)]].color);
+		}
+		break;
+	}
+}
+
 void Renderer::draw2DLine(const Vector2f& begin, const Vector2f& end, const Vector4f& color) {
 	const Vertex vertices[] = {
 		Vertex(Vector3f(begin.x, begin.y, 0.0f), Vector2f(0.0f, 0.0f), color),
@@ -445,7 +480,7 @@ void Renderer::draw2DLine(const Vector2f& begin, const Vector2f& end, const Vect
 
 	setShaderUniform(&orthogonalProjection);
 
-	drawPrimitive(EPT_LINES, vertices, 2);
+	render(EPT_LINES, vertices, 2);
 }
 
 void Renderer::draw2DRectangle(const Vector4f& rectangle, const Vector4f& color) {
@@ -468,7 +503,7 @@ void Renderer::draw2DRectangle(const Vector4f& rectangle, const Vector4f& color)
 
 	setShaderUniform(&orthogonalProjection);
 
-	drawPrimitive(EPT_TRIANGLE_STRIP, vertices, 4);
+	render(EPT_TRIANGLE_STRIP, vertices, 4);
 }
 
 void Renderer::draw2DImage(Image* image, const Vector4f& rectangle, const Vector4f color) {
@@ -483,6 +518,7 @@ void Renderer::draw2DImage(Image* image, const Vector4f& rectangle, const Vector
 
 	setFlag(ERF_DEPTH_TEST, false);
 	setFlag(ERF_DEPTH_MASK, false);
+
 	setFlag(ERF_ALPHA_BLEND, 
 		(color.w < 1.0f) || 
 		((activeTexture[0] == NULL) ? 
@@ -493,5 +529,7 @@ void Renderer::draw2DImage(Image* image, const Vector4f& rectangle, const Vector
 
 	setShaderUniform(&orthogonalProjection);
 
-	drawPrimitive(EPT_TRIANGLE_STRIP, vertices, 4);
+	render(EPT_TRIANGLE_STRIP, vertices, 4);
+//	const unsigned int indices[] = {1, 0, 2, 2, 3, 1};
+//	render(EPT_TRIANGLES, vertices, 4, indices, 6);
 }

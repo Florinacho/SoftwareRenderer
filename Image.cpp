@@ -239,6 +239,10 @@ bool Image::load(const char* filename) {
 	size.x = header.width;
 	size.y = header.height;
 
+	if (header.yOrigin == 0) {
+		flipVertical();
+	}
+
 	return true;
 }
 
@@ -360,8 +364,10 @@ Vector4f Image::getPixel(unsigned int x, unsigned int y) const {
 		} raw;
 	};
 
-	x %= size.x;
-	y %= size.y;
+//	x %= size.x;
+//	y %= size.y;
+	if (x >= size.x) return ans;
+	if (y >= size.y) return ans;
 	
 	const unsigned int pixelIndex = (y * size.x + x) * getPixelSize();
 	
@@ -382,9 +388,9 @@ Vector4f Image::getPixel(unsigned int x, unsigned int y) const {
 		ans.w = 1.0f;
 		break;
 	case Image::EPF_R8G8B8 :
-		ans.x = (float)data[pixelIndex + 0] / 255.0f;
+		ans.x = (float)data[pixelIndex + 2] / 255.0f;
 		ans.y = (float)data[pixelIndex + 1] / 255.0f;
-		ans.z = (float)data[pixelIndex + 2] / 255.0f;
+		ans.z = (float)data[pixelIndex + 0] / 255.0f;
 		ans.w = 1.0f;
 		break;
 	case Image::EPF_R8G8B8A8 :

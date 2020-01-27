@@ -33,7 +33,7 @@ public:
 	
 	const unsigned char* getData() const;
 
-	unsigned int getDataLength() const;
+	virtual unsigned int getDataLength() const;
 
 	Vector2u getSize() const;
 

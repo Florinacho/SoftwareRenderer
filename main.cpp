@@ -103,7 +103,7 @@ struct Mesh {
 
 		renderer->setShaderUniform(&modelViewProjection);
 
-		renderer->drawPrimitive(Renderer::EPT_TRIANGLES, CubeVertices, CubeVerticesCount);
+		renderer->render(Renderer::EPT_TRIANGLES, CubeVertices, CubeVerticesCount);
 	}
 
 	static void VertexShader(VertexShaderData& vertex) {
@@ -125,31 +125,61 @@ struct Mesh {
 	}
 };
 
-int main() {
+class FBRenderer : public Renderer {
 	FrameBuffer frameBuffer;
-	Renderer renderer;
 	RenderTarget renderTarget;
 	Image colorBuffer;
 	Image depthBuffer;
+
+public:
+	int initialize(const char* fb_path, const Vector2u& size, const Image::PixelFormat& pixelFormat) {
+		int status = 0;
+		const vec4 viewport(0.0f, 0.0f, (float)size.x, (float)size.y);
+
+		status = frameBuffer.initialize(fb_path, size, pixelFormat);
+		if (status != FrameBuffer::ERR_NO_ERROR) {
+			printf("Failed to initialize frame buffer.\nError: %s\n", 
+				FrameBuffer::ErrorText[status]);
+			return 1;
+		}
+
+		colorBuffer.create(size, frameBuffer.getPixelFormat());
+		depthBuffer.create(size, Image::EPF_DEPTH);
+
+		renderTarget.setBuffer(RenderTarget::ERT_COLOR_0, &colorBuffer);
+		renderTarget.setBuffer(RenderTarget::ERT_DEPTH, &depthBuffer);
+
+		setRenderTarget(&renderTarget);
+		setViewport(viewport);
+
+		return status;
+	}
+
+	void clear(bool color, bool depth) {
+		if (color) {
+			colorBuffer.clearColor();
+		}
+		if (depth) {
+			depthBuffer.clearColor();
+		}
+	}
+
+	void swap() {
+		frameBuffer.draw(&colorBuffer);
+	}
+};
+
+int main() {
+	FBRenderer renderer;
 	Image image;
 	Mesh mesh;
 	int status;
 
-	status = frameBuffer.initialize("/dev/fb0", screenSize, Image::EPF_R8G8B8A8);
-	if (status != FrameBuffer::ERR_NO_ERROR) {
-		printf("Failed to initialize frame buffer.\nError: %s\n", 
-			FrameBuffer::ErrorText[status]);
-		return 1;
+	status = renderer.initialize(NULL, screenSize, Image::EPF_R8G8B8A8);
+	if (status != 0) {
+		printf("Failed to initialize frame buffer renderer.\n");
+		return status;
 	}
-
-	colorBuffer.create(screenSize, frameBuffer.getPixelFormat());
-	depthBuffer.create(screenSize, Image::EPF_R8G8B8A8);
-
-	renderTarget.setBuffer(RenderTarget::ERT_COLOR_0, &colorBuffer);
-	renderTarget.setBuffer(RenderTarget::ERT_DEPTH, &depthBuffer);
-
-	renderer.setRenderTarget(&renderTarget);
-	renderer.setViewport(viewport);
 
 	if (image.load("tex_test.tga") == false) {
 		printf("Failed to load image.\n");
@@ -166,9 +196,10 @@ int main() {
 		camera.update();
 
 		mesh.rotation += vec3(0.33f, 0.66f, 0.99f);
+
 		mesh.draw(&renderer);
 
-		frameBuffer.draw(&colorBuffer);
+		renderer.swap();
 	}
 
 	return 0;

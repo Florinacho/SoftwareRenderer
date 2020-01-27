@@ -92,6 +92,10 @@ void FrameBuffer::uninitialize() {
 	size.y = 0;
 }
 
+unsigned int FrameBuffer::getDataLength() const {
+	return size.y * fixInfo.line_length;
+}
+
 void FrameBuffer::draw(const Image* image) {
 	if (image == NULL) {
 		return;
@@ -119,9 +123,80 @@ void FrameBuffer::draw(const Image* image) {
 }
 
 void FrameBuffer::setPixel(unsigned int x, unsigned int y, const Vector4f& value) {
+	if (x > size.x) {
+		return;
+	}
+	if (y > size.y) {
+		return;
+	}
+
+	unsigned char red;
+	unsigned char green;
+	unsigned char blue;
+	unsigned char alpha;
+	unsigned int offset;
+
+	switch (pixelFormat) {
+	case EPF_R8G8B8A8 :
+		offset = (y * fixInfo.line_length + x * getPixelSize());
+
+		red = (unsigned char)(255.0f * value.x);
+		green = (unsigned char)(255.0f * value.y);
+		blue = (unsigned char)(255.0f * value.z);
+		alpha = (unsigned char)(255.0f * value.w);
+
+		*(data + offset + 0) = blue;
+		*(data + offset + 1) = green;
+		*(data + offset + 2) = red;
+		*(data + offset + 3) = alpha;		
+		break;
+
+	case EPF_R8G8B8 :
+		offset = (y * fixInfo.line_length + x * getPixelSize());
+
+		red = (unsigned char)(255.0f * value.x);
+		green = (unsigned char)(255.0f * value.y);
+		blue = (unsigned char)(255.0f * value.z);
+
+		*(data + offset + 0) = blue;
+		*(data + offset + 1) = green;
+		*(data + offset + 2) = red;
+		break;
+	}
 }
 
-Vector4f FrameBuffer::getPixel(unsigned int x, unsigned int y) {
+Vector4f FrameBuffer::getPixel(unsigned int x, unsigned int y) const {
 	Vector4f ans;
+
+	if (x > size.x) {
+		return ans;
+	}
+	if (y > size.y) {
+		return ans;
+	}
+
+	unsigned int offset;
+
+	switch (pixelFormat) {
+	case EPF_R8G8B8A8 :
+		offset = (y * fixInfo.line_length + x * getPixelSize()); 
+
+		ans.x = (float)(255.0f * *(data + offset + 2));
+		ans.y = (float)(255.0f * *(data + offset + 1));
+		ans.z = (float)(255.0f * *(data + offset + 0));
+		ans.w = (float)(255.0f * *(data + offset + 3));
+
+		break;
+
+	case EPF_R8G8B8 :
+		offset = (y * fixInfo.line_length + x * getPixelSize()); 
+
+		ans.x = (float)(255.0f * *(data + offset + 2));
+		ans.y = (float)(255.0f * *(data + offset + 1));
+		ans.z = (float)(255.0f * *(data + offset + 0));
+
+		break;
+	}
+
 	return ans;
 }
