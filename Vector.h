@@ -289,6 +289,10 @@ struct Vector3 {
 		z /= other.z;
 		return *this;
 	}
+
+	Vector3<T> operator - () const {
+		return Vector3<T>(-x, -y, -z);
+	}
 	
 	Vector3<T> lerp(const Vector3<T>& other, float value) const {
 		Vector3<T> ans;
@@ -456,6 +460,52 @@ struct Vector4 {
 
 	T getHeight() const {
 		return w - y;
+	}
+
+	T dot(const Vector4<T>& other) const {
+		return x * other.x + y * other.y + z * other.z + w * other.w;
+	}
+
+	void clamp(const T min, const T max) {
+		if (x < min) {
+			x = min;
+		}
+		if (x > max) {
+			x = max;
+		}
+		if (y < min) {
+			y = min;
+		}
+		if (y > max) {
+			y = max;
+		}
+		if (z < min) {
+			z = min;
+		}
+		if (z > max) {
+			z = max;
+		}
+		if (w < min) {
+			w = min;
+		}
+		if (w > max) {
+			w = max;
+		}
+	}
+
+	Vector4<T>& normalize() {
+		float length = x * x + y * y + z * z + w * w;
+		if (length == 0 )
+			return *this;
+
+		length = 1.0f / sqrt(length);
+
+		x = (T)(x * length);
+		y = (T)(y * length);
+		z = (T)(z * length);
+		w = (T)(w * length);
+		
+		return *this;
 	}
 };
 

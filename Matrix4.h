@@ -219,6 +219,12 @@ public:
 
 		return true;	
 	}
+
+	Matrix4<T> getInverse() const {
+		Matrix4<T> ans = *this;
+		ans.invert();
+		return ans;
+	}
 	
 	bool operator == (const Matrix4<T>& other) {
 		return (m[ 0] == other.m[ 0] && m[ 1] == other.m[ 1] && m[ 2] == other.m[ 2] && m[ 3] == other.m[ 3]

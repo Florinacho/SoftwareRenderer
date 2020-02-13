@@ -11,6 +11,7 @@ static const unsigned int MaxTextureCount = 4;
 
 struct VertexShaderData {
 	Vector4f position;
+	Vector4f normal;
 	Vector2f uv;
 	Vector4f color;
 	int index;
@@ -19,6 +20,7 @@ struct VertexShaderData {
 
 struct PixelShaderData {
 	const Image* texture[MaxTextureCount];
+	Vector4f normal;
 	Vector2f uv;
 	Vector4f color;
 //	Vector4f color[RenderTarget::ERT_COUNT];
@@ -59,10 +61,7 @@ private:
 		const Vector3f&, const Vector4f&, 
 		const Vector3f&, const Vector4f&);
 
-	void drawTriangle(
-		const Vector3f&, const Vector2f&, const Vector4f&, 
-		const Vector3f&, const Vector2f&, const Vector4f&, 
-		const Vector3f&, const Vector2f&, const Vector4f&);
+	void drawTriangle(const Vertex&, const Vertex&, const Vertex&);
 
 public:
 	enum PrimitiveType {

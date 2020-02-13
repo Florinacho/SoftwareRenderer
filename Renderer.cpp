@@ -65,6 +65,8 @@ void Renderer::drawLine(const Vector3f& begin, const Vector4f& beginColor,
 	float ydiff = (y2 - y1);
 	float zdiff = (z2 - z1);
 
+	const Vector2u size = colorBufferPtr->getSize();
+
 	if(xdiff == 0.0f && ydiff == 0.0f) {
 		colorBufferPtr->setPixel(x1, y1, color1);
 		return;
@@ -85,22 +87,23 @@ void Renderer::drawLine(const Vector3f& begin, const Vector4f& beginColor,
 		float slope = ydiff / xdiff;
 		for(float x = xmin; x <= xmax; x += 1.0f) {
 			const float y = y1 + ((x - x1) * slope);
+			const int invY = size.y - y;
 			const float k = (x - x1) / xdiff;
-			const float depth = z1 + (z2 - z1) * k;
+			const float depth = 1.0f - (z1 + (z2 - z1) * k);
 			const Vector4f color = color1 + ((color2 - color1) * k);
 
 			if (depth < 0.0f || depth > 1.0f) {
 				continue;
 			}
 
-			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixel(x, y).x) {
+			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixel(x, invY).x) {
 				continue;
 			}
 
-			colorBufferPtr->setPixel(x, colorBufferPtr->getSize().y - y, color);
+			colorBufferPtr->setPixel(x, invY, color);
 
 			if (renderFlags[ERF_DEPTH_MASK]) {
-				depthBufferPtr->setPixel(x, y, Vector4f(depth, depth, depth, 1.0f));
+				depthBufferPtr->setPixel(x, invY, Vector4f(depth, depth, depth, 1.0f));
 			}
 		}
 	} else {
@@ -117,23 +120,24 @@ void Renderer::drawLine(const Vector3f& begin, const Vector4f& beginColor,
 		// draw line in terms of x slope
 		float slope = xdiff / ydiff;
 		for(float y = ymin; y <= ymax; y += 1.0f) {
+			const int invY = size.y - y;
 			const float x = x1 + ((y - y1) * slope);
 			const float k = (y - y1) / ydiff;
-			const float depth = z1 + (z2 - z1) * k;
+			const float depth = 1.0f - (z1 + (z2 - z1) * k);
 			const Vector4f color = color1 + (color2 - color1) * k;
 
 			if (depth < 0.0f || depth > 1.0f) {
 				continue;
 			}
 
-			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixel(x, y).x) {
+			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixel(x, invY).x) {
 				continue;
 			}
 
-			colorBufferPtr->setPixel(x, colorBufferPtr->getSize().y - y, color);
+			colorBufferPtr->setPixel(x, invY, color);
 
 			if (renderFlags[ERF_DEPTH_MASK]) {
-				depthBufferPtr->setPixel(x, y, Vector4f(depth, depth, depth, 1.0f));
+				depthBufferPtr->setPixel(x, invY, Vector4f(depth, depth, depth, 1.0f));
 			}
 		}
 	}
@@ -143,11 +147,7 @@ void Renderer::drawLine(const Vector3f& begin, const Vector4f& beginColor,
 inline float edgeFunction(const Vector4f& a, const Vector4f& b, const Vector4f& c) {
 	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x); 
 }
-/*
-inline float edgeFunction(const Vector4f& a, const Vector4f& b) {
-	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x); 
-}
-*/
+
 inline int min(int a, int b, int c, int min) {
 	int ans = a;
 	if (b < a) {
@@ -177,25 +177,24 @@ inline int max(int a, int b, int c, int max) {
 }
 
 //https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
-void Renderer::drawTriangle(
-		const Vector3f& v0, const Vector2f& uv0, const Vector4f& c0, 
-		const Vector3f& v1, const Vector2f& uv1, const Vector4f& c1, 
-		const Vector3f& v2, const Vector2f& uv2, const Vector4f& c2) {
-
+void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2) {
 	VertexShaderData vertex[3];
-	vertex[0].position = Vector4f(v0, 1.0f);
-	vertex[0].uv = uv0;
-	vertex[0].color = c0;
+	vertex[0].position = Vector4f(v0.position, 1.0f);
+	vertex[0].normal = Vector4f(v0.normal, 0.0f);
+	vertex[0].uv = v0.textureCoords;
+	vertex[0].color = v0.color;
 	vertex[0].uniform = shaderUniform;
 
-	vertex[1].position = Vector4f(v1, 1.0f);
-	vertex[1].uv = uv1;
-	vertex[1].color = c1;
+	vertex[1].position = Vector4f(v1.position, 1.0f);
+	vertex[1].normal = Vector4f(v1.normal, 0.0f);
+	vertex[1].uv = v1.textureCoords;
+	vertex[1].color = v1.color;
 	vertex[1].uniform = shaderUniform;
 
-	vertex[2].position = Vector4f(v2, 1.0f);
-	vertex[2].uv = uv2;
-	vertex[2].color = c2;
+	vertex[2].position = Vector4f(v2.position, 1.0f);
+	vertex[2].normal = Vector4f(v2.normal, 0.0f);
+	vertex[2].uv = v2.textureCoords;
+	vertex[2].color = v2.color;
 	vertex[2].uniform = shaderUniform;
 
 	if (vertexShaderCallback) {
@@ -204,6 +203,7 @@ void Renderer::drawTriangle(
 
 			// Normalize the display coordinates
 			vertex[index].position /= vertex[index].position.w;
+//			vertex[index].normal /= vertex[index].normal.w;
 
 			// Scale the coordinates to the viewport size
 			vertex[index].position = viewportTransformation * vertex[index].position;
@@ -238,10 +238,10 @@ void Renderer::drawTriangle(
 			}
 			weight /= area;
 
-			const float depth =
+			const float depth = 1.0f - (
 					vertex[0].position.z * weight.x + 
 					vertex[1].position.z * weight.y + 
-					vertex[2].position.z * weight.z;
+					vertex[2].position.z * weight.z);
 
 			if (depth < 0.0f || depth > 1.0f) {
 				continue;
@@ -256,6 +256,11 @@ void Renderer::drawTriangle(
 				for (unsigned int index = 0; index < MaxTextureCount; ++index) {
 					pixelShaderData.texture[index] = activeTexture[index];
 				}
+
+				pixelShaderData.normal = 
+						vertex[0].normal * weight.x + 
+						vertex[1].normal * weight.y + 
+						vertex[2].normal * weight.z;				
 
 				pixelShaderData.uv = 
 						vertex[0].uv * weight.x + 
@@ -398,18 +403,12 @@ void Renderer::render(const PrimitiveType primitiveType, const Vertex* vertices,
 			return;
 		}
 		for (unsigned int index = 0; index < vertexCount - 2; index += 3) {
-			drawTriangle(
-				vertices[index + 0].position, vertices[index + 0].textureCoords, vertices[index + 0].color, 
-				vertices[index + 1].position, vertices[index + 1].textureCoords, vertices[index + 1].color,
-				vertices[index + 2].position, vertices[index + 2].textureCoords, vertices[index + 2].color);
+			drawTriangle(vertices[index + 0], vertices[index + 1], vertices[index + 2]);
 		}
 		break;
 	case EPT_TRIANGLE_STRIP :
 		for (unsigned int index = 2, k = 1; index < vertexCount; ++index, k = !k) {
-			drawTriangle(
-				vertices[index - 0].position, vertices[index - 0].textureCoords, vertices[index - 0].color,
-				vertices[index - (k ? 2 : 1)].position, vertices[index - (k ? 2 : 1)].textureCoords, vertices[index - (k ? 2 : 1)].color,
-				vertices[index - (k ? 1 : 2)].position, vertices[index - (k ? 1 : 2)].textureCoords, vertices[index - (k ? 1 : 2)].color);
+			drawTriangle(vertices[index - 0], vertices[index - (k ? 2 : 1)], vertices[index - (k ? 1 : 2)]);
 		}
 		break;
 	}
@@ -446,17 +445,17 @@ void Renderer::render(const PrimitiveType primitiveType, const Vertex* vertices,
 		for (unsigned int index = 0; index < indexCount - 2; index += 3) {
 			
 			drawTriangle(
-				vertices[indices[index + 0]].position, vertices[indices[index + 0]].textureCoords, vertices[indices[index + 0]].color, 
-				vertices[indices[index + 1]].position, vertices[indices[index + 1]].textureCoords, vertices[indices[index + 1]].color,
-				vertices[indices[index + 2]].position, vertices[indices[index + 2]].textureCoords, vertices[indices[index + 2]].color);
+				vertices[indices[index + 0]],
+				vertices[indices[index + 1]],
+				vertices[indices[index + 2]]);
 		}
 		break;
 	case EPT_TRIANGLE_STRIP :
 		for (unsigned int index = 2, k = 1; index < indexCount; ++index, k = !k) {
 			drawTriangle(
-				vertices[indices[index - 0]].position, vertices[indices[index - 0]].textureCoords, vertices[indices[index - 0]].color,
-				vertices[indices[index - (k ? 2 : 1)]].position, vertices[indices[index - (k ? 2 : 1)]].textureCoords, vertices[indices[index - (k ? 2 : 1)]].color,
-				vertices[indices[index - (k ? 1 : 2)]].position, vertices[indices[index - (k ? 1 : 2)]].textureCoords, vertices[indices[index - (k ? 1 : 2)]].color);
+				vertices[indices[index - 0]],
+				vertices[indices[index - (k ? 2 : 1)]],
+				vertices[indices[index - (k ? 1 : 2)]]);
 		}
 		break;
 	}
@@ -518,7 +517,6 @@ void Renderer::draw2DImage(Image* image, const Vector4f& rectangle, const Vector
 
 	setFlag(ERF_DEPTH_TEST, false);
 	setFlag(ERF_DEPTH_MASK, false);
-
 	setFlag(ERF_ALPHA_BLEND, 
 		(color.w < 1.0f) || 
 		((activeTexture[0] == NULL) ? 
