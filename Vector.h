@@ -332,6 +332,33 @@ struct Vector3 {
 		y = u.z * v.x - u.x * v.z;
 		x = u.x * v.y - u.y * v.x;
 	}
+
+	void rotateXZBy(float degrees, const Vector3<T>& center=Vector3<T>())
+	{
+		degrees *= (M_PI / 180.0f);
+
+		const T cs = (T)cosf(degrees);
+		const T sn = (T)sinf(degrees);
+
+		x -= center.x;
+		z -= center.z;
+
+#define COMPILER_BUG
+#ifdef COMPILER_BUG
+		const T cX = (x * cs);
+		const T sZ = (z * sn);
+		const T sX = (x * sn);
+		const T cZ = (z * cs);
+
+		x = cX - sZ;
+		z = sX + cZ;
+#else
+		x = ((x * cs) - (z * sn));
+		z = ((x * sn) + (z * cs));
+#endif
+		x += center.x;
+		z += center.z;
+	}
 };
 typedef Vector3<float> Vector3f;
 typedef Vector3f vec3;
