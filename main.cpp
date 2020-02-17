@@ -8,6 +8,15 @@ const Vector2u screenSize(800, 600);
 const Vector4f viewport(0.0f, 0.0f, (float)screenSize.x, (float)screenSize.y);
 vec4 AmbientLight(0.2f, 0.2f, 0.2, 1.0f);
 
+template<typename T>
+T max(T a, T b) {
+	return ((a < b) ? b : a);
+}
+template<typename T>
+T min(T a, T b) {
+	return ((a < b) ? a : b);
+}
+
 struct Light {
 	enum Type {
 		ELT_POINT,
@@ -34,6 +43,76 @@ struct ShaderUniform {
 	unsigned int lightCount;
 	vec4 ambientLight;
 };
+
+/*****************************************************************************/
+/* Shaders                                                                   */
+/*****************************************************************************/
+void VertexShader(VertexShaderData& vertex) {
+	if (vertex.uniform == NULL) {
+		return;
+	}
+
+	const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(vertex.uniform);
+
+	vertex.position = uniform->modelViewProjectionMatrix * vertex.position;
+}
+
+void PixelShader(PixelShaderData& pixel) {
+	const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(pixel.uniform);
+
+	if (pixel.texture[0] != NULL) {
+		pixel.color *= pixel.texture[0]->getPixelByUV(pixel.uv);
+	}
+}
+
+void LightVertexShader(VertexShaderData& vertex) {
+	if (vertex.uniform == NULL) {
+		return;
+	}
+
+	const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(vertex.uniform);
+
+	vertex.position = uniform->modelViewProjectionMatrix * vertex.position;
+#if 1
+	vertex.normal = uniform->normalMatrix * vertex.normal;
+	vertex.normal.normalize();
+#else
+	Matrix3f nmat3 = uniform->normalMatrix.getMatrix3();
+	vec3 nvec3 = nmat3 * vertex.normal.xyz();
+	vertex.normal = vec4(nvec3, 0.0f);
+#endif
+}
+
+void LightPixelShader(PixelShaderData& pixel) {
+	const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(pixel.uniform);
+
+	vec4 ambient;
+	vec4 diffuse;
+
+//	pixel.color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+
+	if (pixel.texture[0] != NULL) {
+			pixel.color *= pixel.texture[0]->getPixelByUV(pixel.uv);
+//			pixel.color = pixel.texture[0]->getPixelByUV(pixel.uv);
+	}
+
+	if (pixel.uniform != NULL) {
+		ambient += uniform->ambientLight;
+
+		float diffuseProc = 0.0f;
+		for (unsigned int index = 0; index < uniform->lightCount; ++index) {
+			switch (uniform->lights[0].type) {
+			case Light::ELT_DIRECTIONAL :
+				diffuseProc = max(pixel.normal.dot(uniform->lights[0].direction), 0.0f);
+				diffuse = uniform->lights[0].diffuse * diffuseProc;
+				break;
+			}
+		}
+	}
+	pixel.color *= (ambient + diffuse);
+	pixel.color.clamp(0.0f, 1.0f);
+	pixel.color.w = 1.0f;
+}
 
 struct Camera {
 	vec3 position;
@@ -93,15 +172,6 @@ struct Camera {
 		}
 	}
 } camera;
-
-template<typename T>
-T max (T a, T b) {
-	return ((a < b) ? b : a);
-}
-template<typename T>
-T min (T a, T b) {
-	return ((a < b) ? a : b);
-}
 
 struct Mesh {
 	Image* texture;
@@ -179,73 +249,6 @@ struct Mesh {
 			renderer->render(Renderer::EPT_LINES, vertices, 2);
 		}
 	}
-
-	static void VertexShader(VertexShaderData& vertex) {
-		if (vertex.uniform == NULL) {
-			return;
-		}
-
-		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(vertex.uniform);
-
-		vertex.position = uniform->modelViewProjectionMatrix * vertex.position;
-	}
-
-	static void PixelShader(PixelShaderData& pixel) {
-		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(pixel.uniform);
-
-		if (pixel.texture[0] != NULL) {
-			pixel.color *= pixel.texture[0]->getPixelByUV(pixel.uv);
-		}
-	}
-
-	static void LightVertexShader(VertexShaderData& vertex) {
-		if (vertex.uniform == NULL) {
-			return;
-		}
-
-		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(vertex.uniform);
-
-		vertex.position = uniform->modelViewProjectionMatrix * vertex.position;
-#if 1
-		vertex.normal = uniform->normalMatrix * vertex.normal;
-		vertex.normal.normalize();
-#else
-		Matrix3f nmat3 = uniform->normalMatrix.getMatrix3();
-		vec3 nvec3 = nmat3 * vertex.normal.xyz();
-		vertex.normal = vec4(nvec3, 0.0f);
-#endif
-	}
-
-	static void LightPixelShader(PixelShaderData& pixel) {
-		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(pixel.uniform);
-
-		vec4 ambient;
-		vec4 diffuse;
-
-//		pixel.color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
-		if (pixel.texture[0] != NULL) {
-			pixel.color *= pixel.texture[0]->getPixelByUV(pixel.uv);
-//			pixel.color = pixel.texture[0]->getPixelByUV(pixel.uv);
-		}
-
-		if (pixel.uniform != NULL) {
-			ambient += uniform->ambientLight;
-
-			float diffuseProc = 0.0f;
-			for (unsigned int index = 0; index < uniform->lightCount; ++index) {
-				switch (uniform->lights[0].type) {
-				case Light::ELT_DIRECTIONAL :
-					diffuseProc = max(pixel.normal.dot(uniform->lights[0].direction), 0.0f);
-					diffuse = uniform->lights[0].diffuse * diffuseProc;
-					break;
-				}
-			}
-		}
-		pixel.color *= (ambient + diffuse);
-		pixel.color.clamp(0.0f, 1.0f);
-		pixel.color.w = 1.0f;
-	}
 };
 
 struct Billboard {
@@ -306,78 +309,16 @@ struct Billboard {
 
 		static const float half = 10.5f;
 		static const Vertex vertices[] = {
-			Vertex(vec3( half, half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 0.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f)),
-			Vertex(vec3(-half,-half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 1.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f)),
-			Vertex(vec3(-half, half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 0.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f)),
+			Vertex(vec3( half, half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 0.0f), vec4(1.0f, 1.0f, 0.5f, 1.0f)),
+			Vertex(vec3(-half,-half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 1.0f), vec4(1.0f, 1.0f, 0.5f, 1.0f)),
+			Vertex(vec3(-half, half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 0.0f), vec4(1.0f, 1.0f, 0.5f, 1.0f)),
 
-			Vertex(vec3(-half,-half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 1.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f)),
-			Vertex(vec3( half, half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 0.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f)),
-			Vertex(vec3( half,-half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 1.0f), vec4(1.0f, 1.0f, 1.0f, 1.0f)),
+			Vertex(vec3(-half,-half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(0.0f, 1.0f), vec4(1.0f, 1.0f, 0.5f, 1.0f)),
+			Vertex(vec3( half, half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 0.0f), vec4(1.0f, 1.0f, 0.5f, 1.0f)),
+			Vertex(vec3( half,-half, 0.0f), vec3(0.0f, 0.0f, 1.0f), vec2(1.0f, 1.0f), vec4(1.0f, 1.0f, 0.5f, 1.0f)),
 		};
 
 		renderer->render(Renderer::EPT_TRIANGLES, vertices, sizeof(vertices) / sizeof(vertices[0]));
-	}
-
-	static void VertexShader(VertexShaderData& vertex) {
-		if (vertex.uniform == NULL) {
-			return;
-		}
-
-		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(vertex.uniform);
-
-		vertex.position = uniform->modelViewProjectionMatrix * vertex.position;
-	}
-
-	static void PixelShader(PixelShaderData& pixel) {
-		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(pixel.uniform);
-
-		if (pixel.texture[0] != NULL) {
-			pixel.color *= pixel.texture[0]->getPixelByUV(pixel.uv);
-		}
-	}
-
-	static void LightVertexShader(VertexShaderData& vertex) {
-		if (vertex.uniform == NULL) {
-			return;
-		}
-
-		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(vertex.uniform);
-
-		vertex.position = uniform->modelViewProjectionMatrix * vertex.position;
-
-		vertex.normal = uniform->normalMatrix * vertex.normal;
-		vertex.normal.normalize();
-	}
-
-	static void LightPixelShader(PixelShaderData& pixel) {
-		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(pixel.uniform);
-
-		vec4 ambient;
-		vec4 diffuse;
-
-//		pixel.color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
-		if (pixel.texture[0] != NULL) {
-			pixel.color *= pixel.texture[0]->getPixelByUV(pixel.uv);
-//			pixel.color = pixel.texture[0]->getPixelByUV(pixel.uv);
-		}
-
-		if (pixel.uniform != NULL) {
-			ambient += uniform->ambientLight;
-
-			float diffuseProc = 0.0f;
-			for (unsigned int index = 0; index < uniform->lightCount; ++index) {
-				switch (uniform->lights[0].type) {
-				case Light::ELT_DIRECTIONAL :
-					diffuseProc = max(pixel.normal.dot(uniform->lights[0].direction), 0.0f);
-					diffuse = uniform->lights[0].diffuse * diffuseProc;
-					break;
-				}
-			}
-		}
-		pixel.color *= (ambient + diffuse);
-		pixel.color.clamp(0.0f, 1.0f);
-		pixel.color.w = 1.0f;
 	}
 };
 
@@ -400,7 +341,7 @@ int main() {
 		return 3;
 	}
 
-	if (image2.load("bill.tga") == false) {
+	if (image2.load("particle.tga") == false) {
 		printf("Failed to load bill image.\n");
 		return 3;
 	}
