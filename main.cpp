@@ -2,38 +2,21 @@
 #include <vector>
 
 #include "FBRenderer.h"
+#include "Light.h"
+#include "Camera.h"
 #include "CubeMesh.h"
 
-const Vector2u screenSize(800, 600);
-const Vector4f viewport(0.0f, 0.0f, (float)screenSize.x, (float)screenSize.y);
-vec4 AmbientLight(0.2f, 0.2f, 0.2, 1.0f);
-
-template<typename T>
-T max(T a, T b) {
-	return ((a < b) ? b : a);
-}
-template<typename T>
-T min(T a, T b) {
-	return ((a < b) ? a : b);
-}
-
-struct Light {
-	enum Type {
-		ELT_POINT,
-		ELT_SPOT,
-		ELT_DIRECTIONAL
-	};
-
-	Type type;
-	vec3 position;
-	vec3 direction;
-	vec4 diffuse;
-
-	Light(Light::Type ntype, const vec4& color)
-		: type(ntype), diffuse(color) {
-	}
-};
+const vec2u screenSize(800, 600);
+const vec4 viewport(0.0f, 0.0f, (float)screenSize.x, (float)screenSize.y);
+const vec4 AmbientLight(0.2f, 0.2f, 0.2, 1.0f);
 std::vector<Light> lightList;
+Camera camera(60.0f, (float)screenSize.x / (float)screenSize.y);
+
+/*****************************************************************************/
+/* Shaders                                                                   */
+/*****************************************************************************/
+template<typename T>T max(T a, T b) {return ((a < b) ? b : a);}
+template<typename T>T min(T a, T b) {return ((a < b) ? a : b);}
 
 struct ShaderUniform {
 	mat4 modelViewMatrix;
@@ -44,9 +27,7 @@ struct ShaderUniform {
 	vec4 ambientLight;
 };
 
-/*****************************************************************************/
-/* Shaders                                                                   */
-/*****************************************************************************/
+// Default shaders
 void VertexShader(VertexShaderData& vertex) {
 	if (vertex.uniform == NULL) {
 		return;
@@ -57,6 +38,7 @@ void VertexShader(VertexShaderData& vertex) {
 	vertex.position = uniform->modelViewProjectionMatrix * vertex.position;
 }
 
+// Light shaders
 void PixelShader(PixelShaderData& pixel) {
 	const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(pixel.uniform);
 
@@ -89,11 +71,8 @@ void LightPixelShader(PixelShaderData& pixel) {
 	vec4 ambient;
 	vec4 diffuse;
 
-//	pixel.color = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-
 	if (pixel.texture[0] != NULL) {
 			pixel.color *= pixel.texture[0]->getPixelByUV(pixel.uv);
-//			pixel.color = pixel.texture[0]->getPixelByUV(pixel.uv);
 	}
 
 	if (pixel.uniform != NULL) {
@@ -114,65 +93,6 @@ void LightPixelShader(PixelShaderData& pixel) {
 	pixel.color.w = 1.0f;
 }
 
-struct Camera {
-	vec3 position;
-	vec3 rotation;
-	vec3 scale;
-
-	vec3 target;
-	vec3 up;
-
-	float fieldOfView;
-	float aspectRatio;
-	float zNear;
-	float zFar;
-
-	mat4 view;
-	mat4 projection;
-	mat4 viewProjection;
-
-	bool viewDirty;
-	bool projectionDirty;
-	bool viewProjectionDirty;
-
-	Camera() {
-		position = vec3( 0.0f, 0.0f, 0.0f);
-		rotation = vec3( 0.0f, 0.0f, 0.0f);
-		scale    = vec3( 1.0f, 1.0f, 1.0f);
-		target   = vec3( 0.0f, 0.0f,-50.0f);
-		up       = vec3( 0.0f, 1.0f, 0.0f);
-
-		fieldOfView = 60.0f;
-		zNear = 0.1f;
-		zFar = 300.0f;
-
-		aspectRatio = (float)screenSize.x / (float)screenSize.y;
-
-		viewDirty = true;
-		projectionDirty = true;
-		viewProjectionDirty = false;
-	}
-
-	void update() {
-		if (viewDirty == true) {
-			view.setCameraLookAtTransformation(position, target, up);
-			viewDirty = false;
-			viewProjectionDirty = true;
-		}
-
-		if (projectionDirty == true) {
-			projection.setPerspective(fieldOfView, aspectRatio, zNear, zFar);
-			projectionDirty = false;
-			viewProjectionDirty = true;
-		}
-
-		if (viewProjectionDirty == true) {
-			viewProjection = projection * view;
-			viewProjectionDirty = false;
-		}
-	}
-} camera;
-
 struct Mesh {
 	Image* texture;
 	mat4 model;
@@ -188,14 +108,14 @@ struct Mesh {
 
 		model.setIdentity();
 
-		position = vec3(  0.0f,  0.0f,-50.0f);
-		rotation = vec3(  0.0f,  0.0f,  0.0f);
-		scale    = vec3(  1.0f,  1.0f,  1.0f);
+		position = vec3( 0.0f, 0.0f, 0.0f);
+		rotation = vec3( 0.0f, 0.0f, 0.0f);
+		scale    = vec3( 1.0f, 1.0f, 1.0f);
 
 		alphaBlend = false;
 	}
 
-	void draw(Renderer* renderer) {
+	void draw(Renderer* renderer, bool drawNormals = false) {
 		renderer->setActiveTexture(0, texture);
 
 		renderer->setFlag(Renderer::ERF_DEPTH_TEST, true);
@@ -212,8 +132,6 @@ struct Mesh {
 		uniform.modelViewProjectionMatrix = camera.viewProjection * model;
 		uniform.modelViewMatrix = camera.view * model;
 		uniform.normalMatrix = model;
-//		uniform.normalMatrix.transpose();
-//		uniform.normalMatrix.invert();
 
 		uniform.lights = &lightList[0];
 		uniform.lightCount = lightList.size();
@@ -222,60 +140,32 @@ struct Mesh {
 		renderer->setShaderUniform(&uniform);
 
 		renderer->render(Renderer::EPT_TRIANGLES, CubeVertices, CubeVerticesCount);
-	}
 
-	void drawNormals(Renderer* renderer) {
-		renderer->setActiveTexture(0, NULL);
+		if (drawNormals) {
+			renderer->setActiveTexture(0, NULL);
 
-		renderer->setFlag(Renderer::ERF_DEPTH_TEST, true);
-		renderer->setFlag(Renderer::ERF_DEPTH_MASK, true);
-		renderer->setFlag(Renderer::ERF_ALPHA_BLEND, false);
+			renderer->setFlag(Renderer::ERF_DEPTH_TEST, true);
+			renderer->setFlag(Renderer::ERF_DEPTH_MASK, true);
+			renderer->setFlag(Renderer::ERF_ALPHA_BLEND, false);
 
-		renderer->setVertexShaderCallback(VertexShader);
-		renderer->setPixelShaderCallback(PixelShader);
+			renderer->setVertexShaderCallback(VertexShader);
+			renderer->setPixelShaderCallback(PixelShader);
 
-		model.setTransformation(position, rotation, scale);
-
-		ShaderUniform uniform;
-		uniform.modelViewProjectionMatrix = camera.viewProjection * model;
-
-		renderer->setShaderUniform(&uniform);
-
-		for (unsigned int index = 0; index < CubeVerticesCount; ++index) {
-			Vertex vertices[] = {
-				Vertex(CubeVertices[index].position, vec3(), vec2(), CubeVertices[index].color),
-				Vertex(CubeVertices[index].position + CubeVertices[index].normal, vec3(), vec2(), CubeVertices[index].color)
-			};
-			renderer->render(Renderer::EPT_LINES, vertices, 2);
+			for (unsigned int index = 0; index < CubeVerticesCount; ++index) {
+				const Vertex vertices[] = {
+					Vertex(CubeVertices[index].position, vec3(), vec2(), CubeVertices[index].color),
+					Vertex(CubeVertices[index].position + CubeVertices[index].normal, vec3(), vec2(), CubeVertices[index].color)
+				};
+				renderer->render(Renderer::EPT_LINES, vertices, 2);
+			}
 		}
 	}
 };
 
-struct Billboard {
-	Image* texture;
-	mat4 model;
-
-	vec3 position;
-	vec3 rotation;
-	vec3 scale;
-
-	bool alphaBlend;
-
-	Billboard() {
-		texture = NULL;
-
-		model.setIdentity();
-
-		position = vec3(  0.0f,  0.0f,  0.0f);
-		rotation = vec3(  0.0f,  0.0f,  0.0f);
-		scale    = vec3(  1.0f,  1.0f,  1.0f);
-
-		alphaBlend = true;
-	}
-
+struct Billboard : public Mesh {
 	void setTarget(vec3 target) {
 		vec3 dis = target - position;
-		float xzdis = sqrt(dis.x * dis.x + dis.z * dis.z);
+		const float xzdis = sqrt(dis.x * dis.x + dis.z * dis.z);
 		rotation.x = rad2deg(-atan2f(dis.y, xzdis));
 		rotation.y = rad2deg(-(atan2f(-dis.x, dis.z)));
 		rotation.z = 0.0f;
@@ -294,17 +184,7 @@ struct Billboard {
 		model.setTransformation(position, rotation, scale);
 
 		ShaderUniform uniform;
-
 		uniform.modelViewProjectionMatrix = camera.viewProjection * model;
-		uniform.modelViewMatrix = camera.view * model;
-		uniform.normalMatrix = model;
-//		uniform.normalMatrix.transpose();
-//		uniform.normalMatrix.invert();
-
-		uniform.lights = &lightList[0];
-		uniform.lightCount = lightList.size();
-		uniform.ambientLight = AmbientLight;
-
 		renderer->setShaderUniform(&uniform);
 
 		static const float half = 10.5f;
@@ -326,8 +206,9 @@ int main() {
 	FBRenderer renderer;
 	Image image;
 	Image image2;
-	Mesh mesh;
+	Mesh floor, cube;
 	Billboard billboard;
+	float billAngle = 0.0f;
 	int status;
 
 	status = renderer.initialize(NULL, screenSize, Image::EPF_R8G8B8A8);
@@ -346,59 +227,40 @@ int main() {
 		return 3;
 	}
 
+	camera.position = vec3(0.0f, 50.0f, 30.0f);
+	camera.target = vec3(0.0f, 0.0f,-50.0f);
+	camera.viewDirty = true;	
+
 	Light directionalLight(Light::ELT_DIRECTIONAL, vec4(1.0f, 1.0f, 1.0f, 1.0f));
 	directionalLight.direction = vec3(0.0f, 1.0f, 0.0f);
 	directionalLight.direction.normalize();
 	lightList.push_back(directionalLight);
 
-	mesh.texture = &image;
+	floor.position = vec3(0.0f, 0.0f,-50.0f);
+	floor.scale = vec3(10.0f, 0.1f, 10.0f);
+	floor.texture = &image;
+
+	cube.position = vec3(0.0f, 0.0f,-50.0f);
+	cube.scale = vec3(2.0f, 2.0f, 2.0f);
+	cube.texture = &image;
+	
+	billboard.position = vec3(20.0f, 10.0f,-50.0f);
 	billboard.texture = &image2;
-
-	mesh.scale.x = 10.0f;
-	mesh.scale.y = 0.1f;
-	mesh.scale.z = 10.0f;
-
-	camera.position.z += 30.0f;
-	camera.position.y += 50.0f;
-	camera.viewDirty = true;
-
-	float billAngle = 0.0f;
+	billboard.alphaBlend = true;
 
 	while (true) {
 		renderer.clear(true, true);
 
 		camera.update();
 
-		{
-		vec3 position = mesh.position;
-		vec3 rotation = mesh.rotation;
-		vec3 scale = mesh.scale;
+		floor.draw(&renderer);
 
-		mesh.rotation = vec3( 0.0f, 0.0f, 0.0f);
-		mesh.rotation = vec3( 0.0f, 0.0f, 0.0f);
-		mesh.scale = vec3(10.0f, 0.1f,10.0f);
-		mesh.draw(&renderer);
+		cube.rotation += vec3(0.33f, 0.66f, 0.99f);
+		cube.draw(&renderer, true);
 
-		mesh.position = position;
-		mesh.rotation = rotation;
-		mesh.scale = scale;
-		}
-
-		{
-		mesh.scale = vec3(2.0f, 2.0f, 2.0f);
-		mesh.rotation += vec3(0.33f, 0.66f, 0.99f);
-		mesh.draw(&renderer);
-		mesh.drawNormals(&renderer);
-		}
-
-		{
-		vec3 newPos(20.0f, 10.0f,-50.0f);
-		newPos.rotateXZBy(billAngle, vec3(0.0f, 10.0f,-50.0f));
-		billAngle += 1.0f;
-		billboard.position = newPos;
+		billboard.position.rotateXZBy(1.0f, vec3(0.0f, 10.0f,-50.0f));
 		billboard.setTarget(camera.position);
 		billboard.draw(&renderer);
-		}
 
 		renderer.swap();
 	}

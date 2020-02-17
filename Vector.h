@@ -165,6 +165,7 @@ typedef Vector2<unsigned int> Vector2u;
 typedef Vector2<float> Vector2f;
 
 typedef Vector2f vec2;
+typedef Vector2u vec2u;
 
 template <typename T>
 struct Vector3 {
