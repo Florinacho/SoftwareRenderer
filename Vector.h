@@ -490,6 +490,10 @@ struct Vector4 {
 		return w - y;
 	}
 
+	Vector3<T> getXYZ() const {
+		return Vector3<T>(x, y, z);
+	}
+
 	T dot(const Vector4<T>& other) const {
 		return x * other.x + y * other.y + z * other.z + w * other.w;
 	}

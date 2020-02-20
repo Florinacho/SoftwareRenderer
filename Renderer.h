@@ -2,30 +2,11 @@
 #define __RENDERER_H__
 
 #include "FrameBuffer.h"
+#include "Shader.h"
 #include "Vertex.h"
 #include "Image.h"
 #include "Matrix4.h"
 #include "RenderTarget.h"
-
-static const unsigned int MaxTextureCount = 4;
-
-struct VertexShaderData {
-	Vector4f position;
-	Vector4f normal;
-	Vector2f uv;
-	Vector4f color;
-	int index;
-	const void* uniform;
-};
-
-struct PixelShaderData {
-	const Image* texture[MaxTextureCount];
-	Vector4f normal;
-	Vector2f uv;
-	Vector4f color;
-//	Vector4f color[RenderTarget::ERT_COUNT];
-	const void* uniform;
-};
 
 typedef void (*VertexShaderCallback)(VertexShaderData&);
 typedef void (*PixelShaderCallback)(PixelShaderData&);
@@ -56,6 +37,8 @@ private:
 
 	VertexShaderCallback vertexShaderCallback;
 	PixelShaderCallback pixelShaderCallback;
+
+	Shader* shader;
 
 	void drawLine(
 		const Vector3f&, const Vector4f&, 
@@ -90,6 +73,10 @@ public:
 	void setVertexShaderCallback(VertexShaderCallback callback);
 
 	void setPixelShaderCallback(PixelShaderCallback callback);
+
+	void setShader(Shader* shader);
+
+	Shader* getShader() const;
 
 	void setShaderUniform(const void* data);
 

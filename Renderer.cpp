@@ -184,22 +184,33 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	vertex[0].uv = v0.textureCoords;
 	vertex[0].color = v0.color;
 	vertex[0].uniform = shaderUniform;
+	vertex[0].index = 0;
 
 	vertex[1].position = Vector4f(v1.position, 1.0f);
 	vertex[1].normal = Vector4f(v1.normal, 0.0f);
 	vertex[1].uv = v1.textureCoords;
 	vertex[1].color = v1.color;
 	vertex[1].uniform = shaderUniform;
+	vertex[1].index = 1;
 
 	vertex[2].position = Vector4f(v2.position, 1.0f);
 	vertex[2].normal = Vector4f(v2.normal, 0.0f);
 	vertex[2].uv = v2.textureCoords;
 	vertex[2].color = v2.color;
 	vertex[2].uniform = shaderUniform;
+	vertex[2].index = 2;
+
+	UniformVariable tmp[3];
 
 	if (vertexShaderCallback) {
 		for (unsigned int index = 0; index < 3; ++index) {
-			vertexShaderCallback(vertex[index]);
+			if (shader) {
+				shader->VertexShader(vertex[index]);
+				tmp[index] = shader->uniform[0].get<vec4>();
+			} else {
+				vertexShaderCallback(vertex[index]);
+			}
+
 
 			// Normalize the display coordinates
 			vertex[index].position /= vertex[index].position.w;
@@ -273,7 +284,28 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 						vertex[2].color * weight.z;
 				pixelShaderData.uniform = shaderUniform;
 
-				pixelShaderCallback(pixelShaderData);
+				pixelShaderData.eye = 
+						vertex[0].eye * weight.x + 
+						vertex[1].eye * weight.y + 
+						vertex[2].eye * weight.z;	
+
+				pixelShaderData.lightDirection = 
+						vertex[0].lightDirection * weight.x + 
+						vertex[1].lightDirection * weight.y + 
+						vertex[2].lightDirection * weight.z;	
+
+				if (shader) {
+					for (unsigned int index = 0; index < shader->uniform.size(); ++index) {
+						switch (shader->uniform[index].dataType) {
+						case ShaderVariable::EDT_VEC4 :
+							shader->uniform[index] = tmp[0].get<vec4>() * weight.x + tmp[1].get<vec4>() * weight.y + tmp[2].get<vec4>() * weight.z;
+							break;
+						}
+					}
+					shader->FragmentShader(pixelShaderData);
+				} else {
+					pixelShaderCallback(pixelShaderData);
+				}
 			} 
 
 			if (renderFlags[ERF_ALPHA_BLEND]) {
@@ -298,6 +330,7 @@ Renderer::Renderer() {
 
 	vertexShaderCallback = NULL;
 	pixelShaderCallback = NULL;
+	shader = NULL;
 	shaderUniform = NULL;
 
 	for (unsigned int index = 0; index < ERF_COUNT; ++index) {
@@ -349,6 +382,14 @@ void Renderer::setVertexShaderCallback(VertexShaderCallback callback) {
 
 void Renderer::setPixelShaderCallback(PixelShaderCallback callback) {
 	pixelShaderCallback = callback;
+}
+
+void Renderer::setShader(Shader* value) {
+	shader = value;
+}
+
+Shader* Renderer::getShader() const {
+	return shader;
 }
 
 void Renderer::setShaderUniform(const void* uniform) {
@@ -476,6 +517,7 @@ void Renderer::draw2DLine(const Vector2f& begin, const Vector2f& end, const Vect
 
 	setVertexShaderCallback(DefaultVertexShader);
 	setPixelShaderCallback(DefaultPixelShader);
+	setShader(NULL);
 
 	setShaderUniform(&orthogonalProjection);
 
@@ -499,6 +541,7 @@ void Renderer::draw2DRectangle(const Vector4f& rectangle, const Vector4f& color)
 
 	setVertexShaderCallback(DefaultVertexShader);
 	setPixelShaderCallback(DefaultPixelShader);
+	setShader(NULL);
 
 	setShaderUniform(&orthogonalProjection);
 
@@ -524,6 +567,7 @@ void Renderer::draw2DImage(Image* image, const Vector4f& rectangle, const Vector
 
 	setVertexShaderCallback(DefaultVertexShader);
 	setPixelShaderCallback(DefaultPixelShader);
+	setShader(NULL);
 
 	setShaderUniform(&orthogonalProjection);
 

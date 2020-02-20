@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <vector>
 
+#include "Shader.h"
 #include "FBRenderer.h"
 #include "Light.h"
 #include "Camera.h"
@@ -11,6 +12,8 @@ const vec4 viewport(0.0f, 0.0f, (float)screenSize.x, (float)screenSize.y);
 const vec4 AmbientLight(0.2f, 0.2f, 0.2, 1.0f);
 std::vector<Light> lightList;
 Camera camera(60.0f, (float)screenSize.x / (float)screenSize.y);
+
+#include <string.h>
 
 /*****************************************************************************/
 /* Shaders                                                                   */
@@ -63,6 +66,22 @@ void LightVertexShader(VertexShaderData& vertex) {
 	vec3 nvec3 = nmat3 * vertex.normal.xyz();
 	vertex.normal = vec4(nvec3, 0.0f);
 #endif
+
+#define POINT_LIGHT
+#if defined (POINT_LIGHT)
+	const vec4 pos = uniform->modelViewMatrix * vertex.position;
+	vertex.lightDirection = uniform->lights[1].position - pos.getXYZ();
+	vertex.eye = -pos.getXYZ();
+/**
+	for (unsigned int index = 0; index < uniform->lightCount; ++index) {
+		switch (uniform->lights[index].type) {
+		case Light::ELT_POINT :
+			uniform->lights[index].direction = uniform->lights[index].position - vertex.position;
+			break;
+		}
+	}
+/**/
+#endif
 }
 
 void LightPixelShader(PixelShaderData& pixel) {
@@ -85,6 +104,12 @@ void LightPixelShader(PixelShaderData& pixel) {
 				diffuseProc = max(pixel.normal.dot(uniform->lights[0].direction), 0.0f);
 				diffuse = uniform->lights[0].diffuse * diffuseProc;
 				break;
+			case Light::ELT_POINT :
+				{
+	//			vec3
+//				float intensity = 
+				}
+				break;
 			}
 		}
 	}
@@ -92,6 +117,79 @@ void LightPixelShader(PixelShaderData& pixel) {
 	pixel.color.clamp(0.0f, 1.0f);
 	pixel.color.w = 1.0f;
 }
+
+int k = 0;
+struct LightShader : public Shader {
+	int testLocation;
+
+	LightShader() {
+		testLocation = addUniform("testVarying", ShaderVariable::EDT_VEC4);
+	}
+
+	void VertexShader(VertexShaderData& vertex) {
+		if (vertex.uniform == NULL) {
+			return;
+		}
+
+		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(vertex.uniform);
+
+		vertex.position = uniform->modelViewProjectionMatrix * vertex.position;
+#if 1
+		vertex.normal = uniform->normalMatrix * vertex.normal;
+		vertex.normal.normalize();
+#else
+		Matrix3f nmat3 = uniform->normalMatrix.getMatrix3();
+		vec3 nvec3 = nmat3 * vertex.normal.xyz();
+		vertex.normal = vec4(nvec3, 0.0f);
+#endif
+
+		switch (k % 3) {
+		case 0 :
+			this->uniform[testLocation] = vec4(1.0f, 0.0f, 0.0f, 1.0f);
+			break;
+		case 1 :
+			this->uniform[testLocation] = vec4(0.0f, 1.0f, 0.0f, 1.0f);
+			break;
+		case 2 :
+			this->uniform[testLocation] = vec4(0.0f, 0.0f, 1.0f, 1.0f);
+			break;
+		default :
+			this->uniform[testLocation] = vec4(1.0f, 1.0f, 1.0f, 1.0f);
+			break;
+		}
+		++k;
+	}
+
+	void FragmentShader(PixelShaderData& pixel) {
+		const ShaderUniform* uniform = reinterpret_cast<const ShaderUniform*>(pixel.uniform);
+
+		vec4 ambient;
+		vec4 diffuse;
+
+		if (pixel.texture[0] != NULL) {
+				pixel.color *= pixel.texture[0]->getPixelByUV(pixel.uv);
+		}
+
+		if (pixel.uniform != NULL) {
+			ambient += uniform->ambientLight;
+
+			float diffuseProc = 0.0f;
+			for (unsigned int index = 0; index < uniform->lightCount; ++index) {
+				switch (uniform->lights[0].type) {
+				case Light::ELT_DIRECTIONAL :
+					diffuseProc = max(pixel.normal.dot(uniform->lights[0].direction), 0.0f);
+					diffuse = uniform->lights[0].diffuse * diffuseProc;
+					break;
+				}
+			}
+		}
+		pixel.color *= (ambient + diffuse);
+		pixel.color.clamp(0.0f, 1.0f);
+		pixel.color.w = 1.0f;
+
+		pixel.color = this->uniform[testLocation].get<vec4>();
+	}
+} lightShader;
 
 struct Mesh {
 	Image* texture;
@@ -124,6 +222,7 @@ struct Mesh {
 
 		renderer->setVertexShaderCallback(LightVertexShader);
 		renderer->setPixelShaderCallback(LightPixelShader);
+		renderer->setShader(&lightShader);
 
 		model.setTransformation(position, rotation, scale);
 
@@ -180,6 +279,7 @@ struct Billboard : public Mesh {
 
 		renderer->setVertexShaderCallback(VertexShader);
 		renderer->setPixelShaderCallback(PixelShader);
+		renderer->setShader(NULL);
 
 		model.setTransformation(position, rotation, scale);
 
@@ -203,6 +303,51 @@ struct Billboard : public Mesh {
 };
 
 int main() {
+#if 0
+	LightShader shader;
+
+	vec2 inUV(4.0f, 8.0);
+	vec2 outUV(-1.0f, -2.0f);
+	vec3 inNormal(1.0f, 2.0f, 3.0f);
+	vec3 outNormal(-1, -2, -3);
+	int uvLocation;
+	int normalLocation;
+
+	uvLocation = shader.addUniform("uv", ShaderVariable::EDT_VEC2);
+	normalLocation = shader.addUniform("normal", ShaderVariable::EDT_VEC3);
+
+	if (normalLocation != -1) {
+		shader.uniform[normalLocation] = inNormal;
+		shader.uniform[uvLocation] = inUV;
+
+		for (unsigned int index = 0; index < shader.uniform.size(); ++index) {
+			switch (shader.uniform[index].dataType) {
+			case ShaderVariable::EDT_VEC2 :
+				{
+				UniformVariable tmp[3];
+				tmp[0] = shader.uniform[uvLocation].get<vec2>() * 0.3f;
+				tmp[1] = shader.uniform[uvLocation].get<vec2>() * 0.3f;
+				tmp[2] = shader.uniform[uvLocation].get<vec2>() * 0.3f;
+				shader.uniform[uvLocation] = tmp[0].get<vec2>() + tmp[1].get<vec2>() + tmp[2].get<vec2>();
+				}
+				break;
+			case ShaderVariable::EDT_VEC3 :
+				shader.uniform[normalLocation] = shader.uniform[normalLocation].get<vec3>() * 0.5f;
+				break;
+			}
+		}
+		outUV = shader.uniform[uvLocation].get<vec2>();
+		outNormal = shader.uniform[normalLocation].get<vec3>();
+	}
+
+	printf("outUv: %f, %f\n", outUV.x, outUV.y);
+	printf("outNormal: %f, %f, %f\n", outNormal.x, outNormal.y, outNormal.z);
+
+	printf("sizeof(Shader) = %lu\n", sizeof(Shader));
+	printf("sizeof(UniformVariable) = %lu\n", sizeof(UniformVariable));
+
+	return 0;
+#endif
 	FBRenderer renderer;
 	Image image;
 	Image image2;
@@ -236,6 +381,8 @@ int main() {
 	directionalLight.direction.normalize();
 	lightList.push_back(directionalLight);
 
+	lightList.push_back(Light(Light::ELT_POINT, vec4(0.0f, 0.0f, 1.0f, 1.0f)));
+
 	floor.position = vec3(0.0f, 0.0f,-50.0f);
 	floor.scale = vec3(10.0f, 0.1f, 10.0f);
 	floor.texture = &image;
@@ -261,6 +408,8 @@ int main() {
 		billboard.position.rotateXZBy(1.0f, vec3(0.0f, 10.0f,-50.0f));
 		billboard.setTarget(camera.position);
 		billboard.draw(&renderer);
+
+		lightList[1].position = billboard.position;
 
 		renderer.swap();
 	}
