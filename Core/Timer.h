@@ -1,8 +1,6 @@
 #ifndef __TIMER_H__
 #define __TIMER_H__
 
-namespace os {
-
 typedef signed long long int64;
 typedef unsigned long long uint64;
 
@@ -46,7 +44,5 @@ public:
 
 	static uint64 GetSeconds();
 };
-
-} // namespace os 
 
 #endif // __TIMER_H__

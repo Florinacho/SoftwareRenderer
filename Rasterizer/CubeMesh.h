@@ -5,12 +5,12 @@
 
 static const float CubeSize = 10.0f;
 static const float CubeHalfSize = CubeSize / 2.0f;
-static const vec4 TopColor = vec4(1.0f, 1.0f, 1.0f, 1.0f);
-static const vec4 BottomColor = vec4(0.0f, 0.0f, 0.0f, 1.0f);
-static const vec4 FrontColor = vec4(1.0f, 0.0f, 0.0f, 1.0f);
-static const vec4 RightColor = vec4(0.0f, 1.0f, 0.0f, 1.0f);
-static const vec4 BackColor = vec4(0.0f, 0.0f, 1.0f, 1.0f);
-static const vec4 LeftColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);
+static const vec4 TopColor = vec4(1.0f, 1.0f, 1.0f, 0.5f);
+static const vec4 BottomColor = vec4(0.0f, 1.0f, 1.0f, 0.5f);
+static const vec4 FrontColor = vec4(1.0f, 0.0f, 0.0f, 0.5f);
+static const vec4 RightColor = vec4(0.0f, 1.0f, 0.0f, 0.5f);
+static const vec4 BackColor = vec4(0.0f, 0.0f, 1.0f, 0.5f);
+static const vec4 LeftColor = vec4(1.0f, 1.0f, 0.0f, 0.5f);
 
 static const Vertex CubeVertices[] = {
 	// Front

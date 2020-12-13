@@ -22,13 +22,17 @@ struct Camera {
 	bool projectionDirty;
 	bool viewProjectionDirty;
 
-	Camera(float fov = 60.0f, float ar = 1.33f, float near = 0.1f, float far = 100.0f) 
-		: fieldOfView(fov), aspectRatio(ar), zNear(near), zFar(far) {
+	Camera(float fov = 60.0f, float ar = 1.33f, float znear = 0.1f, float zfar = 100.0f) 
+		: fieldOfView(fov), aspectRatio(ar), zNear(znear), zFar(zfar) {
 		position = vec3( 0.0f, 0.0f, 0.0f);
 		rotation = vec3( 0.0f, 0.0f, 0.0f);
 		scale    = vec3( 1.0f, 1.0f, 1.0f);
 		target   = vec3( 0.0f, 0.0f, 0.0f);
 		up       = vec3( 0.0f, 1.0f, 0.0f);
+		
+		view.setIdentity();
+		projection.setIdentity();
+		viewProjection.setIdentity();
 
 		viewDirty = true;
 		projectionDirty = true;

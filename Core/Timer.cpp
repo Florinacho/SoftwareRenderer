@@ -2,8 +2,6 @@
 #include <sys/time.h>
 #include "Timer.h"
 
-namespace os {
-
 Timer::Timer() {
 	_beginTime = 0;
 	_pauseTime = 0;
@@ -90,5 +88,3 @@ uint64 Timer::GetSeconds() {
 	gettimeofday(&tp, NULL);
 	return tp.tv_sec + tp.tv_usec / 1000000;
 }
-
-} // namespace os
