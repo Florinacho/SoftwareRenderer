@@ -212,7 +212,7 @@ int main() {
 					case KEY_W :
 						printf("Wireframe: %s\n", renderer.toggleFlag(Renderer::GFX_WIREFRAME) ? "On" : "Off");
 						break;
-					case KEY_ESC :
+					case KEY_ESCAPE :
 						running = false;
 						break;
 					}
