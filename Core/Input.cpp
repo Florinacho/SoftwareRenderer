@@ -153,17 +153,18 @@ bool Input::getEvent(Event& event) {
 
 			default :
 				event.type = Event::KEYBOARD;
-				event.keyCode = inputEvent.code;
-				event.state = inputEvent.value;
+				event.key = inputEvent.code;
+				event.value = inputEvent.value;
 				return true;
 			}
+			break;
 
 		case EV_ABS :
 			switch (inputEvent.code) {
 			case REL_X :
 				mouseX = inputEvent.value;
 
-				event.type = Event::MOUSE_MOVE;
+				event.type = Event::MOUSE_POSITION;
 				event.x = mouseX;
 				event.y = mouseY;
 				return true;
@@ -171,7 +172,7 @@ bool Input::getEvent(Event& event) {
 			case REL_Y :
 				mouseY = inputEvent.value;
 
-				event.type = Event::MOUSE_MOVE;
+				event.type = Event::MOUSE_POSITION;
 				event.x = mouseX;
 				event.y = mouseY;
 				return true;
@@ -183,21 +184,21 @@ bool Input::getEvent(Event& event) {
 			case REL_X :
 				mouseX += inputEvent.value;
 
-				event.type = Event::MOUSE_MOVE;
+				event.type = Event::MOUSE_POSITION;
 				event.x = mouseX;
 				event.y = mouseY;
 				return true;
 			case REL_Y :
 				mouseY += inputEvent.value;
 
-				event.type = Event::MOUSE_MOVE;
+				event.type = Event::MOUSE_POSITION;
 				event.x = mouseX;
 				event.y = mouseY;
 				return true;
 
 			case REL_WHEEL :
 				event.type = Event::MOUSE_WHEEL;
-				event.state = inputEvent.value;
+				event.value = inputEvent.value;
 				return true;
 			}
 			break;

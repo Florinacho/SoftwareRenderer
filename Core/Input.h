@@ -4,10 +4,6 @@
 #include <vector>
 #include "Event.h"
 
-#ifdef __linux__
-#include <linux/input.h>
-#endif // __linux__
-
 class Input {
 	std::vector<int> inputList;
 

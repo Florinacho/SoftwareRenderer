@@ -1,20 +1,23 @@
 #include <stdio.h>
 
+#if defined (_WIN32)
 #include "Window.h"
+#elif defined (__linux__)
+#include <linux/input.h>
+#include "FrameBuffer.h"
+#else
+#error Unsupported platform!
+#endif
+
+#include "Timer.h"
 #include "Renderer.h"
 #include "Camera.h"
 #include "Mesh.h"
-#include "Timer.h"
-
 #include "Shader.h"
 
-template<typename T>
-T max(T a, T b) {
-	return (a < b) ? b : a;
-}
-
 struct TestShader : public Shader {
-	TestShader() : Shader() {
+	TestShader() 
+		: Shader() {
 	}
 	
 	void vertexShader(VertexShaderData& vertex) {
@@ -32,7 +35,7 @@ struct TestShader : public Shader {
 	}
 };
 
-int main() {// 79.2
+int main() {
 	/*************************************************************************/
 	/* Output                                                                */
 	/*************************************************************************/
@@ -45,12 +48,11 @@ int main() {// 79.2
 	}
 #elif defined (__linux__)
 	FrameBuffer output;
-	if (output.initialize(NULL, ScreenSize, Image::EPF_R8G8B8) != 0) {
+	if (output.initialize(NULL, ScreenSize, Image::EPF_R8G8B8A8) != 0) {
 		printf("Failed to initialize the frame buffer.\n");
 		return 1;
 	}
-#else
-	#error Unsupported platform!
+	output.input.addAllInputs();
 #endif
 
 	/*************************************************************************/
@@ -189,56 +191,45 @@ int main() {// 79.2
 				running = false;
 				break;
 
-			case Event::KEY_UP :
-				switch (event.key) {
-				case KEY_1 :
-					printf("Object 1 visible: %s\n", (drawObject[0] = !drawObject[0]) ? "On" : "Off");
-					break;
-				case KEY_2 :
-					printf("Object 2 visible: %s\n", (drawObject[1] = !drawObject[1]) ? "On" : "Off");
-					break;
-				case KEY_3 :
-					printf("Object 3 visible: %s\n", (drawObject[2] = !drawObject[2]) ? "On" : "Off");
-					break;
-				case KEY_4 :
-					printf("Object 4 visible: %s\n", (drawObject[3] = !drawObject[3]) ? "On" : "Off");
-					break;
-				case KEY_P :
-					printf("Perspective correction: %s\n", renderer.toggleFlag(Renderer::GFX_PERSPECTIVE_CORRECT) ? "On" : "Off");
-					break;
-				case KEY_W :
-					printf("Wireframe: %s\n", renderer.toggleFlag(Renderer::GFX_WIREFRAME) ? "On" : "Off");
-					break;
-				case KEY_ESCAPE :
-					running = false;
-					break;
-				case KEY_LEFT :
-					keys[0] = false;
-					break;
-				case KEY_DOWN :
-					keys[1] = false;
-					break;
-				case KEY_RIGHT :
-					keys[2] = false;
-					break;
-				case KEY_UP :
-					keys[3] = false;
-					break;
+			case Event::KEYBOARD :
+				if (event.state == 0) { // Key released
+					switch (event.key) {
+					case KEY_1 :
+						printf("Object 1 visible: %s\n", (drawObject[0] = !drawObject[0]) ? "On" : "Off");
+						break;
+					case KEY_2 :
+						printf("Object 2 visible: %s\n", (drawObject[1] = !drawObject[1]) ? "On" : "Off");
+						break;
+					case KEY_3 :
+						printf("Object 3 visible: %s\n", (drawObject[2] = !drawObject[2]) ? "On" : "Off");
+						break;
+					case KEY_4 :
+						printf("Object 4 visible: %s\n", (drawObject[3] = !drawObject[3]) ? "On" : "Off");
+						break;
+					case KEY_P :
+						printf("Perspective correction: %s\n", renderer.toggleFlag(Renderer::GFX_PERSPECTIVE_CORRECT) ? "On" : "Off");
+						break;
+					case KEY_W :
+						printf("Wireframe: %s\n", renderer.toggleFlag(Renderer::GFX_WIREFRAME) ? "On" : "Off");
+						break;
+					case KEY_ESC :
+						running = false;
+						break;
+					}
 				}
-				break;
-			case Event::KEY_DOWN :
+
 				switch (event.key) {
 				case KEY_LEFT :
-					keys[0] = true;
+					keys[0] = event.state;
 					break;
 				case KEY_DOWN :
-					keys[1] = true;
+					keys[1] = event.state;
 					break;
 				case KEY_RIGHT :
-					keys[2] = true;
+					keys[2] = event.state;
 					break;
 				case KEY_UP :
-					keys[3] = true;
+					keys[3] = event.state;
 					break;
 				}
 				break;
@@ -270,8 +261,7 @@ int main() {// 79.2
 			camera.target.z -= 1.0f;
 			camera.viewDirty = true;
 		}
-		// printf("camera.position = vec3(%f, %f, %f);\n", camera.position.x, camera.position.y, camera.position.z);
-		// printf("camera.target = vec3(%f, %f, %f);\n", camera.target.x, camera.target.y, camera.target.z);
+
 		camera.update();
 
 		// Render the meshes
@@ -308,8 +298,7 @@ int main() {// 79.2
 			totalFPS += frameCount;
 			totalSeconds += 1;
 			
-			sprintf(tmp, "Software Renderer FPS: %d | %.1f", frameCount, (float)totalFPS / (float)totalSeconds);
-			output.setTitle(tmp);
+			printf("Software Renderer FPS: %d | %.1f", frameCount, (float)totalFPS / (float)totalSeconds);
 			frameCount = 0;
 			lastTime += 1000;
 		}

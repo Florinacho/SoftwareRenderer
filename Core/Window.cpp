@@ -1,3 +1,4 @@
+#if defined (_WIN32)
 #include "Window.h"
 
 #include <string.h>
@@ -54,20 +55,20 @@ LRESULT CALLBACK Win32WindowProcess(HWND hwindow, UINT message, WPARAM wParam, L
 	switch (message) {
 	case WM_SYSKEYDOWN :
 	case WM_KEYDOWN :
-		window->pEvent->type = Event::KEY_DOWN;
+		window->pEvent->type = Event::KEYBOARD;
 		window->pEvent->key = MapLeftRightKeys(wParam, lParam);
 		window->pEvent->value = 1;
 		return 0;
 		
 	case WM_SYSKEYUP :
 	case WM_KEYUP :
-		window->pEvent->type = Event::KEY_UP;
+		window->pEvent->type = Event::KEYBOARD;
 		window->pEvent->key = MapLeftRightKeys(wParam, lParam);
 		window->pEvent->value = 0;
 		return 0;
 
 	case WM_MOUSEMOVE :
-		window->pEvent->type = Event::MOUSE_MOVE;
+		window->pEvent->type = Event::MOUSE_POSITION;
 		window->mousePosition.x = LOWORD(lParam);
 		window->mousePosition.y = HIWORD(lParam);
 		window->pEvent->x = window->mousePosition.x;
@@ -75,37 +76,44 @@ LRESULT CALLBACK Win32WindowProcess(HWND hwindow, UINT message, WPARAM wParam, L
 		return 0;
 
 	case WM_LBUTTONDOWN :
-		window->pEvent->type = Event::BUTTON_DOWN;
+		window->pEvent->type = Event::MOUSE_BUTTON;
 		window->pEvent->button = LEFT_BUTTON;
+		window->pEvent->state = 1;
 		return 0;
 		
 	case WM_LBUTTONUP :
-		window->pEvent->type = Event::BUTTON_UP;
+		window->pEvent->type = Event::MOUSE_BUTTON;
 		window->pEvent->button = LEFT_BUTTON;
+		window->pEvent->state = 0;
 		return 0;
 		
 	case WM_MBUTTONDOWN :
-		window->pEvent->type = Event::BUTTON_DOWN;
+		window->pEvent->type = Event::MOUSE_BUTTON;
 		window->pEvent->button = MIDDLE_BUTTON;
+		window->pEvent->state = 1;
 		return 0;
 		
 	case WM_MBUTTONUP :
-		window->pEvent->type = Event::BUTTON_UP;
+		window->pEvent->type = Event::MOUSE_BUTTON;
 		window->pEvent->button = MIDDLE_BUTTON;
+		window->pEvent->state = 0;
 		return 0;
 		
 	case WM_RBUTTONDOWN : 
-		window->pEvent->type = Event::BUTTON_DOWN;
+		window->pEvent->type = Event::MOUSE_BUTTON;
 		window->pEvent->button = RIGHT_BUTTON;
+		window->pEvent->state = 1;
 		return 0;
 		
 	case WM_RBUTTONUP :
-		window->pEvent->type = Event::BUTTON_UP;
+		window->pEvent->type = Event::MOUSE_BUTTON;
 		window->pEvent->button = RIGHT_BUTTON;
+		window->pEvent->state = 0;
 		return 0;
 		
 	case WM_MOUSEWHEEL :
-		window->pEvent->type = GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? Event::WHEEL_UP : Event::WHEEL_DOWN;
+		window->pEvent->type = Event::MOUSE_WHEEL;
+		window->pEvent->state = GET_WHEEL_DELTA_WPARAM(wParam);
 		return 0;
 		
 	case WM_SIZE :
@@ -417,3 +425,4 @@ void Win32Window::blit(const Image* image) {
 	memcpy(data, image->getData(), getDataLength());
 	BitBlt(_display, 0, 0, size.x, size.y, hDCMem, 0, 0, SRCCOPY);
 }
+#endif // _WIN32

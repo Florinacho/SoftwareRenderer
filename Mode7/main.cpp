@@ -11,9 +11,8 @@
 #if defined (_WIN32)
 #include "Window.h"
 #elif defined (__linux__)
-#include <linux/input.h>
-#include <unistd.h>
 #include "FrameBuffer.h"
+//#include <linux/input.h>
 #endif
 
 #include "Image.h"
@@ -34,11 +33,6 @@ const Vector4f BottomSky(0.0f, 1.0f, 1.0f, 1.0f);
 const Vector4f TopSky(0.0f, 0.5f, 1.0f, 1.0f);
 
 const int MaxLapCount = 1;
-
-bool PlayerControl = false;
-float progress = 0.0f;
-float lookAtProgress = 0.0f;
-int lapCount = 0;
 
 struct RenderContext {
 	Frustum frustum;
@@ -72,7 +66,7 @@ void DrawPartial(RenderContext* context, int id, int start, int end) {
 
 }
 
-int main() { // 200.09
+int main() {
 	/*************************************************************************/
 	/* Output                                                                */
 	/*************************************************************************/
@@ -84,10 +78,11 @@ int main() { // 200.09
 	}
 #elif defined (__linux__)
 	FrameBuffer output;
-	if (output.initialize(NULL, WindowSize, Image::EPF_R8G8B8) != 0) {
+	if (output.initialize(NULL, WindowSize, Image::EPF_R8G8B8A8) != 0) {
 		printf("Failed to initialize the frame buffer.\n");
 		return 1;
 	}
+	output.input.addAllInputs();
 #else
 	#error Unsupported platform!
 #endif
@@ -146,6 +141,11 @@ int main() { // 200.09
 	unsigned int frameCount = 0;
 	unsigned int totalFPS = 0;
 	unsigned int totalSeconds = 0;
+
+	bool playerControl = false;
+	float progress = 0.0f;
+	float lookAtProgress = 0.0f;
+	int lapCount = 0;
 	
 	Event event;
 	bool running = true;
@@ -170,47 +170,32 @@ int main() { // 200.09
 		/* Check input events.                                               */
 		/*********************************************************************/
 		while (output.getEvent(&event)) {
-			if (event.state == 1) {
-				PlayerControl = true;
-			}
-			
 			switch (event.type) {
 			case Event::WINDOW_CLOSE :
 				running = false;
 				break;
 
-			case Event::KEY_UP :
+			case Event::KEYBOARD:
+				if (event.state == 1) {
+					playerControl = true;
+				}
 				switch (event.key) {
 				case KEY_ESCAPE :
-					running = false;
+					if (event.state == 0) {
+						running = false;
+					}
 					break;
 				case KEY_LEFT :
-					keys[0] = false;
+					keys[0] = event.state;
 					break;
 				case KEY_DOWN :
-					keys[1] = false;
+					keys[1] = event.state;
 					break;
 				case KEY_RIGHT :
-					keys[2] = false;
+					keys[2] = event.state;
 					break;
 				case KEY_UP :
-					keys[3] = false;
-					break;
-				}
-				break;
-			case Event::KEY_DOWN :
-				switch (event.key) {
-				case KEY_LEFT :
-					keys[0] = true;
-					break;
-				case KEY_DOWN :
-					keys[1] = true;
-					break;
-				case KEY_RIGHT :
-					keys[2] = true;
-					break;
-				case KEY_UP :
-					keys[3] = true;
+					keys[3] = event.state;
 					break;
 				}
 				break;
@@ -220,7 +205,7 @@ int main() { // 200.09
 		/*********************************************************************/
 		/* Update camera position and direction.                             */
 		/*********************************************************************/
-		if (PlayerControl) {
+		if (playerControl) {
 			if (keys[3]) {
 				camera.position.x += cosf(camera.rotation) * 0.2f * deltaTime;
 				camera.position.y += sinf(camera.rotation) * 0.2f  * deltaTime;
@@ -229,10 +214,10 @@ int main() { // 200.09
 				camera.position.y -= sinf(camera.rotation) * 0.2f  * deltaTime;
 			}
 			if (keys[0] && !keys[2]) {
-				camera.rotation -= 1.1f * deltaTime;
+				camera.rotation -= 1.5f * deltaTime;
 			}
 			if (keys[2] && !keys[0]) {
-				camera.rotation += 1.1f * deltaTime;
+				camera.rotation += 1.5f * deltaTime;
 			}
 		} else {
 			camera.position = spline.getSplinePoint(progress);
@@ -265,7 +250,7 @@ int main() { // 200.09
 		for (unsigned int y = 0; y < HalfWindowSize.y; ++y) {
 			const float fSampleDepth = (float)y / ((float)HalfWindowSize.y);
 			const Vector4f skyColor = BottomSky * fSampleDepth + TopSky * 
-														(1.0f - fSampleDepth);
+								(1.0f - fSampleDepth);
 			for (unsigned int x = 0; x < WindowSize.x; ++x) {
 				colorBuffer.setPixel(x, y, skyColor);
 			}

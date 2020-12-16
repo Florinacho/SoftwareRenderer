@@ -148,4 +148,12 @@ void FrameBuffer::draw(const Image* image) {
 	}
 }
 
+void FrameBuffer::blit(const Image* image) {
+	draw(image);
+}
+
+bool FrameBuffer::getEvent(Event* event) {
+	return input.getEvent(*event);
+}
+
 #endif // __linux__

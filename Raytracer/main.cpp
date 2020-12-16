@@ -233,10 +233,11 @@ int main() {
 	}
 #elif defined (__linux__)
 	FrameBuffer output;
-	if (output.initialize(NULL, WindowSize, Image::EPF_R8G8B8) != 0) {
+	if (output.initialize(NULL, WindowSize, Image::EPF_R8G8B8A8) != 0) {
 		printf("Failed to initialize the frame buffer.\n");
 		return 1;
 	}
+	output.input.addAllInputs();
 #else
 	#error Unsupported platform!
 #endif

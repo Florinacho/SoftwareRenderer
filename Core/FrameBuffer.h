@@ -5,6 +5,7 @@
 
 #include <linux/fb.h>
 #include "Image.h"
+#include "Input.h"
 
 class Image;
 
@@ -15,6 +16,8 @@ class FrameBuffer : public Image {
 	fb_fix_screeninfo fixInfo;
 	
 public:
+	Input input;
+
 	enum ErrorCode {
 		ERR_NO_ERROR = 0,
 		ERR_CANNOT_OPEN_TTY0,
@@ -42,8 +45,12 @@ public:
 	unsigned int getDataLength() const;
 	
 	void draw(const Image* image);
+
+	void blit(const Image* image);
+
+	bool getEvent(Event* event);
 };
 
-#endif // __linux__
+#endif // __FRAME_BUFFER_H__
 
-#endif // __RBP_FRAME_BUFFER_H__
+#endif // __linux__
