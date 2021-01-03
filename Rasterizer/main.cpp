@@ -97,12 +97,12 @@ int main() {
 		return 2;
 	}
 
-	if (texture[1].load("particle.tga") == false) {
+	if (texture[1].load("tex_particle.tga") == false) {
 		printf("Failed to load texture1.\n");
 		return 3;
 	}
 	
-	if (texture[2].load("suzanne.tga") == false) {
+	if (texture[2].load("tex_suzanne.tga") == false) {
 		printf("Failed to load suzanne texture.\n");
 		return 3;
 	}
@@ -159,7 +159,7 @@ int main() {
 	billboard.vertexCount = 6;
 	
 	Mesh suzanne;
-	suzanne.loadObj("Suzanne.obj");
+	suzanne.loadObj("suzanne.obj");
 	suzanne.camera = &camera;
 	suzanne.position = vec3(0.0f, 0.0f,-50.0f);
 	suzanne.scale = vec3(20.0f, 20.0f, 20.0f);
@@ -298,7 +298,7 @@ int main() {
 			totalFPS += frameCount;
 			totalSeconds += 1;
 			
-			printf("Software Renderer FPS: %d | %.1f", frameCount, (float)totalFPS / (float)totalSeconds);
+			printf("Software Renderer FPS: %d | %.1f\n", frameCount, (float)totalFPS / (float)totalSeconds);
 			frameCount = 0;
 			lastTime += 1000;
 		}

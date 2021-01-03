@@ -8,15 +8,15 @@ L_FILES=-O3
 
 LIBS=-lm -pthread -lgdi32
 
-CORE_SOURCE=../Core
-C_FLAGS+=-I$(CORE_SOURCE)
+COMMON_SOURCE=../Core
+C_FLAGS+=-I$(COMMON_SOURCE)
 
 SOURCE_FILES=\
-			$(CORE_SOURCE)/Image.cpp \
-			$(CORE_SOURCE)/FrameBuffer.cpp \
-			$(CORE_SOURCE)/Window.cpp \
-			$(CORE_SOURCE)/Timer.cpp \
-			$(CORE_SOURCE)/Input.cpp \
+			$(COMMON_SOURCE)/Image.cpp \
+			$(COMMON_SOURCE)/FrameBuffer.cpp \
+			$(COMMON_SOURCE)/Timer.cpp \
+			$(COMMON_SOURCE)/Input.cpp \
+			$(COMMON_SOURCE)/Window.cpp \
 			main.cpp
 OBJECT_FILES = $(SOURCE_FILES:.cpp=.o)
 
@@ -30,7 +30,7 @@ rebuild: clean build
 %.o: %.cpp
 	$(CC) $(C_FLAGS) -c $< -o $@
 
-$(CORE_SOURCE)/%.o: $(CORE_SOURCE)/%.cpp
+$(COMMON_SOURCE)/%.o: $(COMMON_SOURCE)/%.cpp
 	$(CC) $(C_FLAGS) -c $< -o $@
 
 $(OUTPUT): $(OBJECT_FILES)
