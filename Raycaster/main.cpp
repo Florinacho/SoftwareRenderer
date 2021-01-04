@@ -1,4 +1,4 @@
-// https://github.com/3DSage/OpenGL-Raycaster_v2/blob/main/3DSage_Raycaster_v2.c
+// Source: https://github.com/3DSage/OpenGL-Raycaster_v2/blob/main/3DSage_Raycaster_v2.c
 
 #include <stdio.h>
 #include <math.h>
@@ -9,28 +9,29 @@
 #include <linux/input.h>
 #include "Input.h"
 #include "FrameBuffer.h"
-#endif 
+#endif
 
 #include "Timer.h"
+#include "../Experimental/Font.h"
 
-const uvec2 WindowSize(480, 320);
-const uvec2 TextureSize(32, 32);
 const float DEGTORAD = M_PI / 180.0f;
-
-float FixAng(float a) {
-	if(a >= 360.0f) {
+int MaxDepth = 8;
+float WrapAngle(float a) {
+	if (a >= 360.0f) {
 		a -= 360.0f;
 	}
-	if(a < 0.0f) {
+	if (a < 0.0f) {
 		a += 360.0f;
 	}
 	return a;
 }
 
-float px, py, pdx, pdy, pa;
+/*****************************************************************************/
+/* Textures                                                                  */
+/*****************************************************************************/
+const uvec2 TextureSize(32, 32);
 
-int All_Textures[]=               //all 32x32 textures
-{
+unsigned char Textures[] = {
 	//Checkerboard
 	0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
 	0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
@@ -41,13 +42,13 @@ int All_Textures[]=               //all 32x32 textures
 	0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
 	0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
 	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
 
 	0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
@@ -59,14 +60,14 @@ int All_Textures[]=               //all 32x32 textures
 	0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
 	0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1,
 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
-	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
+	1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0, 1,1,1,1,1,1,1,1, 0,0,0,0,0,0,0,0,
 
 	//Brick
 	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
@@ -104,88 +105,89 @@ int All_Textures[]=               //all 32x32 textures
 	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,0, 0,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,
 	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,0, 0,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,
 	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
-
+	
 	// Window
-	1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 
+	1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,
 	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,    
-
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 
 	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 
-	1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 
-
-	1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 
 	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,   
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
 
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,  
-	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,
+
+	1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
+	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
 	1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1,
 	1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1,
 	
 	// Door
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,  
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,  
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,    
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,    
-	0,0,0,1,1,1,1,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,1,1,1,1,0,0,0,  
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,  
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,   
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,     
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,1,1,1,1,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,1,1,1,1,0,0,0,
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
 
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,  
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,    
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,    
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,   
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,  
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,  
-	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,  
-	0,0,0,1,1,1,1,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,1,1,1,1,0,0,0,  
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,0,0,0,1,0,0,0,
+	0,0,0,1,1,1,1,1, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 1,1,1,1,1,0,0,0,
 
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,1,0,1, 1,0,1,0,0,0,0,0, 0,0,0,0,0,0,0,0,  
-	0,0,0,0,0,0,0,0, 0,0,1,1,1,1,0,1, 1,0,1,1,1,1,0,0, 0,0,0,0,0,0,0,0,   
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,    
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,    
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,  
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,  
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,   
-	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,0, 
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,1,0,1, 1,0,1,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,1,1,1,1,0,1, 1,0,1,1,1,1,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,0,1, 1,0,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,
 
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,  
-	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,     
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,   
-	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,   
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,   
-	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,  
-	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,   
-	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,         
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,0,1, 1,0,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,0,1, 1,0,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,1,1,1,1,1,1,1, 1,1,1,1,1,1,0,1, 1,0,1,1,1,1,1,1, 1,1,1,1,1,1,1,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,1, 1,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0, 0,0,0,0,0,0,0,0,
 };
 
-// MAP
-#define mapX  8      //map width
-#define mapY  8      //map height
-#define mapS 64      //map cube size
+/*****************************************************************************/
+/* Map                                                                       */
+/*****************************************************************************/
+const ivec2 MapSize(8, 8);
+const int MapSizeLength = MapSize.x * MapSize.y;
 
-// walls
+// Walls
 int mapW[] = {
 	1,1,1,1,1,3,1,1,
 	1,0,0,1,0,0,0,1,
@@ -194,10 +196,10 @@ int mapW[] = {
 	2,0,0,0,0,0,0,1,
 	2,0,0,0,0,1,0,1,
 	2,0,0,0,0,0,0,1,
-	1,1,3,1,3,1,3,1,	
+	1,1,3,1,3,1,3,1,
 };
 
-// floors
+// Floors
 int mapF[] = {
 	0,0,0,0,0,0,0,0,
 	0,0,0,0,1,1,0,0,
@@ -206,10 +208,10 @@ int mapF[] = {
 	0,0,2,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,
 	0,1,1,1,1,0,0,0,
-	0,0,0,0,0,0,0,0,	
+	0,0,0,0,0,0,0,0,
 };
 
-// ceiling
+// Ceiling
 int mapC[] = {
 	0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,
@@ -218,203 +220,337 @@ int mapC[] = {
 	0,1,3,1,0,0,0,0,
 	0,0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,0,	
+	0,0,0,0,0,0,0,0,
 };
 
-void DrawRays2D(Image* output, Image* textures, const unsigned int textureCount) {
-	int mx, my, mp, dof, side; 
-	float vx, vy, rx, ry, ra, xo, yo, disV, disH; 
-	float fovY = 70;
-	const float deltaRayRadAngle = ((float)WindowSize.x / (float)fovY) * DEGTORAD;
- 
-	ra = FixAng(pa + fovY / 2.0f);
- 
-	for(int r = 0; r < WindowSize.x; ++r) {
+/*****************************************************************************/
+/* Camera                                                                    */
+/*****************************************************************************/
+class Camera {
+	vec2 position;
+	vec2 direction;
+	float rotation;
+	float fieldOfView;
+	bool keys[4];
+	
+public:
+	Camera(const vec2& pos = vec2(), const float rot = 0.0f, const float fov = 60.0f) {
+		setPosition(pos);
+		setRotation(rot);
+		setFieldOfView(fov);
+		for (unsigned int index = 0; index < 4; ++index) {
+			keys[index] = false;
+		}
+	}
+
+	void setPosition(const vec2& value) {
+		position = value;
+	}
+
+	const vec2& getPosition() const {
+		return position;
+	}
+
+	void setRotation(const float value) {
+		rotation = WrapAngle(value);
+		direction.x =  cos(rotation * DEGTORAD);
+		direction.y = -sin(rotation * DEGTORAD);
+	}
+
+	float getRotation() const {
+		return rotation;
+	}
+
+	const vec2 getTarget(const float distance = 1.0f) const {
+		return position + direction * distance;
+	}
+
+	void setFieldOfView(const float value) {
+		fieldOfView = value;
+	}
+
+	float getFieldofView() const {
+		return fieldOfView;
+	}
+
+	bool processEvent(const Event& event) {
+		if (event.type != Event::KEYBOARD) {
+			return false;
+		}
+
+		switch (event.key) {
+		case KEY_UP :
+		case KEY_W :
+			keys[0] = event.state;
+			return true;
+		case KEY_LEFT :
+		case KEY_A :
+			keys[1] = event.state;
+			return true;
+		case KEY_DOWN :
+		case KEY_S :
+			keys[2] = event.state;
+			return true;
+		case KEY_RIGHT :
+		case KEY_D :
+			keys[3] = event.state;
+			return true;
+		case KEY_SPACE :
+		case KEY_RETURN :
+		case KEY_ENTER :
+			{
+				const vec2 target = getTarget(32.0f);
+				const unsigned int index = (int)(target.y / 64.0f) * MapSize.x + (int)(target.x / 64.0f);
+				switch (mapW[index]) {
+				case 4: // Door
+					mapW[index] = 0;
+					break;
+				}
+			}
+			return true;
+		}
+
+		return false;
+	}
+
+	void update(const float deltaTime = 1.0f) {
+		if (keys[1]) {
+			setRotation(getRotation() + deltaTime * 100.0f);
+		}
+		if (keys[3]) {
+			setRotation(getRotation() - deltaTime * 100.0f);
+		} 
+
+		int xo = (direction.x < 0.0f) ? -20 : 20;
+		int yo = (direction.y < 0.0f) ? -20 : 20;
+
+		int ipx = position.x / 64.0f;		
+		int ipy = position.y / 64.0f;
+		
+		// Move forward
+		if (keys[0]) {
+			const int ipx_add_xo = (position.x + xo) / 64.0f;
+			const int ipy_add_yo = (position.y + yo) / 64.0f;
+			
+			if (mapW[ipy * MapSize.x + ipx_add_xo] == 0) {
+				position.x += direction.x * deltaTime * 100.0f;
+			}
+			if (mapW[ipy_add_yo * MapSize.x + ipx] == 0) {
+				position.y += direction.y * deltaTime * 100.0f;
+			}
+		}
+		// Move backward
+		if (keys[2]) {
+			const int ipx_sub_xo = (position.x - xo) / 64.0f;
+			const int ipy_sub_yo = (position.y - yo) / 64.0f;
+			
+			if (mapW[ipy * MapSize.x + ipx_sub_xo] == 0) {
+				position.x -= direction.x * deltaTime * 100.0f;
+			}
+			if (mapW[ipy_sub_yo * MapSize.x + ipx] == 0) {
+				position.y -= direction.y * deltaTime * 100.0f;
+			}
+		}
+	}
+};
+
+void RenderScene(Image* output, const Camera* camera, uvec4 viewport = uvec4()) {
+	vec2 rayEnd;
+	vec2 verticalRayEnd;
+	vec2 offset;
+	vec2 axisDistance;
+	ivec2 mapCoord;
+	int depth; 
+	int mapIndex;
+	
+	const vec2 playerPosition = camera->getPosition();
+	const float playerAngle = camera->getRotation();
+	const float fieldOfView = camera->getFieldofView();
+	const uvec2 outputSize = output->getSize();
+
+	const float DeltaRayAngle = (float)fieldOfView / (float)outputSize.x;
+	const float WallScale = outputSize.y;
+	const float FloorScale = (((int)WallScale) >> 1) - 1; // Rework - make map size dependent
+
+	float rayAngle = WrapAngle(playerAngle + fieldOfView * 0.5f);
+	
+	for (int rayIndex = 0; rayIndex < outputSize.x; ++rayIndex) {
 		int vmt = 0; // vertical map texture number 
 		int hmt = 0; // horizontal map texture number 
-		
-		// Vertical
-		dof = 0; 
-		side = 0; 
-		disV = 100000;
 
-		const float playerAngleRad = ra * DEGTORAD;
-		const float cosPlayerAngle = cosf(playerAngleRad);
-		const float sinPlayerAngle = sinf(playerAngleRad);
-		
-		float Tan = tan(playerAngleRad);
-	
-		if(cosPlayerAngle > 0.001) {
-			// looking left
-			rx = (((int)px >> 6) << 6) + 64;
-			ry = (px - rx) * Tan + py;
-			xo = 64;
-			yo = -xo * Tan;
-		} else if(cosPlayerAngle < -0.001) {
-			// looking right
-			rx = (((int)px >> 6) << 6) - 0.0001;
-			ry = (px - rx) * Tan + py;
-			xo = -64;
-			yo = -xo * Tan;
+		// Vertical intersection check
+		depth = 0;
+		axisDistance.y = 100000.0f;
+
+		const float rayAngleRad = rayAngle * DEGTORAD;
+		const float cosRayAngle = cosf(rayAngleRad);
+		const float sinRayAngle = sinf(rayAngleRad);
+		      float tanRayAngle = tanf(rayAngleRad);
+
+		if (cosRayAngle > 0.001f) {
+			// Looking left
+			rayEnd.x = (((int)playerPosition.x >> 6) << 6) + 64.0f;
+			rayEnd.y = (playerPosition.x - rayEnd.x) * tanRayAngle + playerPosition.y;
+			offset.x = 64;
+			offset.y = -offset.x * tanRayAngle;
+		} else if (cosRayAngle < -0.001f) {
+			// Looking right
+			rayEnd.x = (((int)playerPosition.x >> 6) << 6) - 0.0001f;
+			rayEnd.y = (playerPosition.x - rayEnd.x) * tanRayAngle + playerPosition.y;
+			offset.x = -64.0f;
+			offset.y = -offset.x * tanRayAngle;
 		} else {
-			// looking up or down. no hit  
-			rx = px;
-			ry = py;
-			dof = 8;
+			// Looking up or down. no hit
+			rayEnd = playerPosition;
+			depth = MaxDepth;
 		}
 
-		while(dof < 8) { 
-			mx = (int)(rx) >> 6;
-			my = (int)(ry) >> 6;
-			mp = my * mapX + mx;
-			
-			if(mp > 0 && mp < mapX * mapY && mapW[mp] > 0) {
-				// hit
-				vmt = mapW[mp] - 1;
-				dof = 8;
-				disV = cosPlayerAngle * (rx - px) - sinPlayerAngle * (ry - py);
+		while (depth < MaxDepth) { 
+			mapCoord.x = (int)(rayEnd.x) >> 6;
+			mapCoord.y = (int)(rayEnd.y) >> 6;
+			mapIndex = mapCoord.y * MapSize.x + mapCoord.x;
+
+			if ((mapIndex > 0) && (mapIndex < MapSize.x * MapSize.y) && (mapW[mapIndex] > 0)) {
+				// Hit
+				vmt = mapW[mapIndex] - 1;
+				depth = MaxDepth;
+				axisDistance.y = cosRayAngle * (rayEnd.x - playerPosition.x) - sinRayAngle * (rayEnd.y - playerPosition.y);
 			} else {
-				// check next horizontal
-				rx += xo;
-				ry += yo;
-				dof += 1;
+				// Check next horizontal
+				rayEnd += offset;
+				++depth;
 			}
 		} 
-		
-		vx = rx;
-		vy = ry;
 
-		// Horizontal
-		dof = 0; 
-		disH = 100000;
-		Tan = 1.0 / Tan; 
+		verticalRayEnd.x = rayEnd.x;
+		verticalRayEnd.y = rayEnd.y;
 
-		if(sinPlayerAngle > 0.001) {
-			// looking up 
-			ry = (((int)py >> 6) << 6) - 0.0001;
-			rx = (py - ry) * Tan + px;
-			yo = -64;
-			xo = -yo * Tan;
-		} else if(sinPlayerAngle < -0.001){
-			// looking down
-			ry = (((int)py >> 6) << 6) + 64;
-			rx = (py - ry) * Tan + px;
-			yo = 64;
-			xo = -yo * Tan;
+		// Horizontal intersection check
+		depth = 0; 
+		axisDistance.x = 100000.0f;
+		tanRayAngle = 1.0f / tanRayAngle; 
+
+		if (sinRayAngle > 0.001f) {
+			// Looking up 
+			rayEnd.y = (((int)playerPosition.y >> 6) << 6) - 0.0001f;
+			rayEnd.x = (playerPosition.y - rayEnd.y) * tanRayAngle + playerPosition.x;
+			offset.y = -64.0f;
+			offset.x = -offset.y * tanRayAngle;
+		} else if (sinRayAngle < -0.001f) {
+			// Looking down
+			rayEnd.y = (((int)playerPosition.y >> 6) << 6) + 64.0f;
+			rayEnd.x = (playerPosition.y - rayEnd.y) * tanRayAngle + playerPosition.x;
+			offset.y = 64.0f;
+			offset.x = -offset.y * tanRayAngle;
 		} else {
-			// looking straight left or right
-			rx = px;
-			ry = py;
-			dof = 8;
+			// Looking straight left or right
+			rayEnd = playerPosition;
+			depth = MaxDepth;
 		}
  
-		while(dof < 8) { 
-			mx = (int)(rx) >> 6;
-			my = (int)(ry) >> 6;
-			mp = my * mapX + mx;                          
+		while (depth < MaxDepth) {
+			mapCoord.x = (int)(rayEnd.x) >> 6;
+			mapCoord.y = (int)(rayEnd.y) >> 6;
+			mapIndex = mapCoord.y * MapSize.x + mapCoord.x;
 
-			if(mp > 0 && mp < mapX * mapY && mapW[mp] > 0) {
-				// hit
-				hmt = mapW[mp] - 1;
-				dof = 8;
-				disH = cosPlayerAngle * (rx - px) - sinPlayerAngle * (ry - py);
+			if ((mapIndex > 0) && (mapIndex < MapSize.x * MapSize.y) && (mapW[mapIndex] > 0)) {
+				// Hit
+				hmt = mapW[mapIndex] - 1;
+				depth = MaxDepth;
+				axisDistance.x = cosRayAngle * (rayEnd.x - playerPosition.x) - sinRayAngle * (rayEnd.y - playerPosition.y);
 			} else {
-				// check next horizontal
-				rx += xo;
-				ry += yo;
-				dof += 1;
+				// Check next horizontal
+				rayEnd += offset;
+				++depth;
 			}
 		} 
-  
+
 		float shade = 1.0f;
 
-		if(disV < disH){
-			// horizontal hit first
-			hmt = vmt; 
-			shade = 0.5; 
-			rx = vx; 
-			ry = vy; 
-			disH = disV; 
+		// Select the smallest wall distance 
+		if (axisDistance.y < axisDistance.x) {
+			hmt = vmt;
+			shade = 0.5f;
+			rayEnd.x = verticalRayEnd.x;
+			rayEnd.y = verticalRayEnd.y;
+			axisDistance.x = axisDistance.y;
 		}
 
-		int ca = FixAng(pa - ra);
-		disH = disH * cos(ca * DEGTORAD); // fix fisheye
-		int lineH = (mapS * WindowSize.y) / (disH);
-		const float ty_step = (float)TextureSize.y / (float)lineH;
+		// Fix fisheye
+		axisDistance.x = axisDistance.x * cos(WrapAngle(rayAngle - playerAngle) * DEGTORAD);
+
+		int lineHeight = (float)MapSizeLength * WallScale / axisDistance.x;
+		const float ty_step = (float)TextureSize.y / (float)lineHeight;
 		float ty_off = 0;
-		
-		if(lineH > WindowSize.y) {
-			// line height and limit
-			ty_off = (lineH - WindowSize.y) >> 1;
-			lineH = WindowSize.y;
+
+		if (lineHeight > outputSize.y) {
+			// Line height and limit
+			ty_off = ((float)lineHeight - (float)outputSize.y) * 0.5f;
+			lineHeight = outputSize.y;
 		}
 
-		int lineOff = (WindowSize.y >> 1) - (lineH >> 1); // line offset
+		int lineOffset = (outputSize.y >> 1) - (lineHeight >> 1);
 
-		// draw walls
+		// Draw walls
 		int y;
 		float ty = ty_off * ty_step + hmt * (float)TextureSize.y;
 		float tx;
-		
+
 		// Fix texture orientation
-		if(shade == 1){
-			tx = (int)(rx / 2.0) % 32;
-			if(ra > 180){
-				tx = 31 - tx;
+		if (shade == 1) {
+			tx = ((int)(rayEnd.x * 0.5f)) % TextureSize.x;
+			if (rayAngle > 180.0f) {
+				tx = TextureSize.x - 1 - tx;
 			}
 		} else {
-			tx = (int)(ry / 2.0) % 32;
-			if(ra > 90 && ra < 270) {
-				tx = 31 - tx;
+			tx = ((int)(rayEnd.y * 0.5f)) % TextureSize.x;
+			if ((rayAngle > 90.0f) && (rayAngle < 270.0f)) {
+				tx = TextureSize.x - 1 - tx;
 			}
 		}
-		
-		
-		for(y = 0; y < lineH; ++y) {
-			float c = All_Textures[(int)(ty) * 32 + (int)(tx)] * shade;
-			output->setRawPixel(r, y + lineOff, Vector4ub(c * 255.0f, c * 255.0f, c * 255.0f, 255));
+
+		for (y = 0; y < lineHeight; ++y) {
+			float c = Textures[(int)ty * 32 + (int)tx] * shade;
+			output->setRawPixel(rayIndex, y + lineOffset, Vector4ub(c * 255.0f, c * 255.0f, c * 255.0f, 255));
 			ty += ty_step;
 		}
 
-		for(y = lineOff + lineH; y < WindowSize.y; ++y) {
-			float dy = y - (WindowSize.y >> 1);
-			float raFix = cos(FixAng(pa - ra) * DEGTORAD);
-			tx = px / 2 + cosPlayerAngle * 158 * 32 / dy / raFix;
-			ty = py / 2 - sinPlayerAngle * 158 * 32 / dy / raFix;
+		for (y = lineOffset + lineHeight; y < outputSize.y; ++y) {
+			const float dy = y - (outputSize.y >> 1);
+			const float raFix = cos(WrapAngle(playerAngle - rayAngle) * DEGTORAD);
+			tx = playerPosition.x * 0.5f + cosRayAngle * FloorScale * 32 / dy / raFix;
+			ty = playerPosition.y * 0.5f - sinRayAngle * FloorScale * 32 / dy / raFix;
 
-			// draw floors
-			int mp = mapF[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
-			float c = All_Textures[((int)(ty) & 31) * 32 + ((int)(tx) & 31) + mp] * 0.7;
-  
-			output->setRawPixel(r, y, Vector4ub(c / 1.3 * 255.0f, c / 1.3 * 255.0f, c * 255.0f, 255));
+			// Draw floors
+			mapIndex = mapF[(int)(ty / 32.0f) * MapSize.x + (int)(tx / 32.0f)] * 32 * 32;
+			float c = Textures[((int)(ty) & 31) * 32 + ((int)(tx) & 31) + mapIndex] * 0.7;
+			output->setRawPixel(rayIndex, y, Vector4ub(c * 200.0f, c * 200.0f, c * 255.0f, 255));
 
-			// draw ceiling
-			mp = mapC[(int)(ty / 32.0) * mapX + (int)(tx / 32.0)] * 32 * 32;
-			c = All_Textures[((int)(ty) & 31) * 32 + ((int)(tx) & 31) + mp] * 0.7;
-
-			output->setRawPixel(r, WindowSize.y - y, Vector4ub(c / 2.0 * 255.0f, c / 1.2 * 255.0f, c / 2.0 * 255.0f, 255));
+			// Draw ceiling
+			mapIndex = mapC[(int)(ty / 32.0f) * MapSize.x + (int)(tx / 32.0f)] * 32 * 32;
+			c = Textures[((int)(ty) & 31) * 32 + ((int)(tx) & 31) + mapIndex] * 0.7f;
+			output->setRawPixel(rayIndex, outputSize.y - y, Vector4ub(c * 128.0f, c * 255.0f, c * 128.0f, 255));
 		}
 
 		// Advance next ray angle
-		ra = FixAng(ra - deltaRayRadAngle);
-		
+		rayAngle = WrapAngle(rayAngle - DeltaRayAngle);
 	}
 }
 
-
-int main(int argc, char* argv[]) { 
+int main(int argc, char* argv[]) {
 	/*************************************************************************/
 	/* Output                                                                */
 	/*************************************************************************/
+	const uvec2 ScreenSize(640, 408);
 #if defined (_WIN32)
-	Win32Window output;	
-	if (output.initialize(WindowSize, Image::EPF_R8G8B8, "Raycaster") == false) {
+	Win32Window output;
+	if (output.initialize(ScreenSize, Image::EPF_R8G8B8, "Raycaster") == false) {
 		printf("Failed to initialize the win32 window.\n");
 		return 1;
 	}
 #elif defined (__linux__)
 	FrameBuffer output;
-	if (output.initialize(NULL, WindowSize, Image::EPF_R8G8B8A8) != 0) {
+	if (output.initialize(NULL, ScreenSize, Image::EPF_R8G8B8A8) != 0) {
 		printf("Failed to initialize the frame buffer.\n");
 		return 1;
 	}
@@ -428,43 +564,33 @@ int main(int argc, char* argv[]) {
 	colorBuffer.wrapping.x = Image::EWT_DISCARD;
 	colorBuffer.wrapping.y = Image::EWT_DISCARD;
 
-	/*************************************************************************/
-	/* Load resources.                                                        */
-	/*************************************************************************/
-	Image textures[2];
-	if (textures[0].load("brick.tga") == false) {
-		printf("Error! Failed to load brick.tga\n");
-		return 1;
-	}
-	textures[0].wrapping = Image::EWT_REPEAT;
-
-	if (textures[1].load("tex_door.tga") == false) {
-		printf("Error! Failed to load tex_door.tga\n");
-		return 1;
-	}
-	textures[1].wrapping = Image::EWT_REPEAT;
+	/************************************************************************/
+	/* Camera                                                               */
+	/************************************************************************/
+	Camera camera(vec2(2, 5) * 64.0f + 32.0f, 90.0f, 70.0f);
 
 	/*************************************************************************/
 	/* Misc.                                                                 */
 	/*************************************************************************/
-	float deltaTime = 1.0f;
 	unsigned long long lastTime = Timer::GetMilliSeconds();
 	unsigned long long currentTime = lastTime;
-
-	unsigned long long lastFPSTime = lastTime;
+	unsigned long long lastFPSTime = currentTime;
 	unsigned int frameCount = 0;
 	unsigned int totalFPS = 0;
 	unsigned int totalSeconds = 0;
+	unsigned int fps = 0;
+	float deltaTime = 1.0f;
+	
+	const char* text = "OPEN DOOR";
+	const int size = 4;
+	const uvec2 textSize = GetTextSize(text, size);
+	const uvec2 halfTextSize = textSize / 2;
+	const uvec2 halfScreenSize = ScreenSize / 2;
+	const uvec2 messagePosition(halfScreenSize.x - halfTextSize.x, ScreenSize.y - ScreenSize.y / 6 - textSize.y);
 	
 	Event event;
 	bool running = true;
-	bool keys[4] = {false, false, false, false};
-	px = 150; 
-	py = 400; 
-	pa = 90;
-	pdx =  cos(pa * DEGTORAD);
-	pdy = -sin(pa * DEGTORAD); // init player
-	
+
 	while (running) {
 		/*********************************************************************/
 		/* Calculate FPS.                                                    */
@@ -475,6 +601,7 @@ int main(int argc, char* argv[]) {
 
 		if (currentTime - lastFPSTime >= 1000) {
 			totalFPS += frameCount;
+			fps = frameCount;
 			totalSeconds += 1;
 			frameCount = 0;
 			lastFPSTime += 1000;
@@ -484,26 +611,21 @@ int main(int argc, char* argv[]) {
 		/* Check keyboard events.                                            */
 		/*********************************************************************/
 		while (output.getEvent(&event)) {
-			if (event.type != Event::KEYBOARD) {
-				continue; // Skip non-keyboard event types
+			if (camera.processEvent(event)) {
+				continue;
 			}
-			
-			switch (event.key) {
-			case KEY_UP :
-				keys[0] = event.state;
+
+			switch (event.type) {
+			case Event::WINDOW_CLOSE :
+				running = false;
 				break;
-			case KEY_LEFT :
-				keys[1] = event.state;
-				break;
-			case KEY_DOWN :
-				keys[2] = event.state;
-				break;
-			case KEY_RIGHT :
-				keys[3] = event.state;
-				break;
-			case KEY_ESCAPE :
-				if (event.state == 0) {
-					running = false;
+			case Event::KEYBOARD :
+				switch (event.key) {
+				case KEY_ESCAPE :
+					if (event.state == 0) {
+						running = false;
+					}
+					break;
 				}
 				break;
 			}
@@ -512,66 +634,30 @@ int main(int argc, char* argv[]) {
 		/*********************************************************************/
 		/* Render scene.                                                     */
 		/*********************************************************************/
-		if(keys[1]){
-			pa += deltaTime * 100.0f;
-			pa = FixAng(pa);
-			pdx = cos(pa * DEGTORAD);
-			pdy = -sin(pa * DEGTORAD);
-		}
-		if(keys[3]) {
-			pa -= deltaTime * 100.0f;
-			pa = FixAng(pa);
-			pdx = cos(pa * DEGTORAD);
-			pdy = -sin(pa * DEGTORAD);
-		} 
+		camera.update(deltaTime);
 
-		int xo=0;
-		// x offset to check map
-		if(pdx < 0) {
-			xo = -20;
-		} else{
-			xo = 20;
+		RenderScene(&colorBuffer, &camera);
+
+		/*********************************************************************/
+		/* GUI                                                               */
+		/*********************************************************************/		
+		DrawText(&colorBuffer, uvec2(0, 0), Vector4ub(255, 0, 0, 255), 4, "FPS:%d", fps);
+
+		vec2 target = camera.getTarget(32.0f);
+		unsigned int mapIndex = (int)(target.y / 64.0f) * MapSize.x + (int)(target.x / 64.0f);
+		switch (mapW[mapIndex]) {
+		case 4 :
+			colorBuffer.drawFilledRectangle(vec4(messagePosition.x, messagePosition.y, messagePosition.x + textSize.x, messagePosition.y + textSize.y), vec4(0.0f, 1.0f, 0.0f, 1.0f));
+			DrawText(&colorBuffer, messagePosition, text, Vector4ub(0, 0, 255, 255), size);
+			break;
 		}
-		int yo = 0;
-		// y offset to check map
-		if(pdy < 0) {
-			yo = -20;
-		} else{
-			yo = 20;
-		}
-		int ipx = px / 64.0;
-		int ipx_add_xo = (px + xo) / 64.0;
-		int ipx_sub_xo = (px - xo) / 64.0;             // x position and offset
-		int ipy = py / 64.0;
-		int ipy_add_yo = (py + yo) / 64.0;
-		int ipy_sub_yo = (py - yo) / 64.0;             // y position and offset
-		
-		if(keys[0]) {  
-			//move forward
-			if(mapW[ipy * mapX + ipx_add_xo] == 0) {
-				px += pdx * deltaTime * 100.0f;
-			}
-			if(mapW[ipy_add_yo * mapX + ipx] == 0){
-				py += pdy * deltaTime * 100.0f;
-			}
-		}
-		if(keys[2]) { 
-			//move backward
-			if(mapW[ipy * mapX + ipx_sub_xo] == 0) {
-				px -= pdx * deltaTime * 100.0f;
-			}
-			if(mapW[ipy_sub_yo * mapX + ipx] == 0){
-				py -= pdy * deltaTime * 100.0f;
-			}
-		} 
-		
-		DrawRays2D(&colorBuffer, textures, 2);
-		
+
+
 		/*********************************************************************/
 		/* Send color buffer to the screen.                                  */
 		/*********************************************************************/
 		output.blit(&colorBuffer);
-	
+
 		++frameCount;
 	}
 
@@ -580,6 +666,6 @@ int main(int argc, char* argv[]) {
 	/*************************************************************************/
 	// output.clearColor();
 	printf("\nAverage FPS: %.2f\n", (float)totalFPS / (float)totalSeconds);
-	
+
 	return 0;
 }
