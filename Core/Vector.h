@@ -1656,6 +1656,7 @@ typedef Vector3<double> dvec3;
 typedef Vector4<bool> bvec4;
 typedef Vector4<signed int> ivec4;
 typedef Vector4<unsigned int> uvec4;
+typedef Vector4<unsigned char> ubvec4;
 typedef Vector4<float> vec4;
 typedef Vector4<double> dvec4;
 
