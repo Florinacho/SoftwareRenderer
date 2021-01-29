@@ -1,12 +1,12 @@
 OUTPUT=main.exe
 
-CC=g++
+CC=mingw32-g++.exe
 
 C_FLAGS=-O3 -msse3 -ffast-math -march=native
 #C_FLAGS=-g3
 L_FILES=-O3
 
-LIBS=-lm -pthread -lgdi32
+LIBS=-lgdi32
 
 COMMON_SOURCE=../Core
 C_FLAGS+=-I$(COMMON_SOURCE)
@@ -35,3 +35,4 @@ $(COMMON_SOURCE)/%.o: $(COMMON_SOURCE)/%.cpp
 
 $(OUTPUT): $(OBJECT_FILES)
 	$(CC) $(L_FILES) $(OBJECT_FILES) $(LIBS) -o $(OUTPUT)
+	chmod +xr $(OUTPUT)
