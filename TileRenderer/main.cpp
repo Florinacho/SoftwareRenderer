@@ -33,7 +33,7 @@ T max(T a, T b) {
 inline void DrawPixel(Image* output, int x, int y, const ubvec4& color, int size = 1) {
 	for (int yIndex = 0; yIndex < size; ++yIndex) {
 		for (int xIndex = 0; xIndex < size; ++xIndex) {
-			output->setRawPixel(x + xIndex, y + yIndex, color);
+			output->setPixel(x + xIndex, y + yIndex, color);
 		}
 	}
 }

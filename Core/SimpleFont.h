@@ -1,16 +1,12 @@
-#ifndef __SIMPLE_FONT_H__
-#define __SIMPLE_FONT_H__
+#ifndef __FONT_H__
+#define __FONT_H__
 
 #include <string.h>
 #include <stdarg.h>
-#include "Vector.h"
+#include <stdio.h>
+#include <stdint.h>
 
-inline char ToUpper(const char c) {
-	if ((c >= 'a') && (c <= 'z')) {
-		return c - 32;
-	}
-	return c;
-}
+#include "Image.h"
 
 const unsigned char SimpleFont[] = {
 	// Space
@@ -34,7 +30,7 @@ const unsigned char SimpleFont[] = {
 	// "
 	0,0,0,0,0,0,0,
 	0,0,1,0,1,0,0,
-	0,1,0,1,0,0,0,
+	0,0,1,0,1,0,0,
 	0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,
@@ -105,8 +101,8 @@ const unsigned char SimpleFont[] = {
 	
 	// *
 	0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,
-	0,0,1,0,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,1,1,1,0,0,
 	0,0,0,1,0,0,0,
 	0,0,1,0,1,0,0,
 	0,0,0,0,0,0,0,
@@ -121,14 +117,14 @@ const unsigned char SimpleFont[] = {
 	0,0,0,1,0,0,0,
 	0,0,0,0,0,0,0,
 	
-	// ?!
-	0,1,0,1,0,1,0,
-	1,1,1,1,1,1,1,
-	0,1,0,1,0,1,0,
-	1,1,1,1,1,1,1,
-	0,1,0,1,0,1,0,
-	1,1,1,1,1,1,1,
-	0,1,0,0,0,1,0,
+	// ,
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,1,0,0,0,0,
 	
 	// -
 	0,0,0,0,0,0,0,
@@ -249,9 +245,9 @@ const unsigned char SimpleFont[] = {
 	
 	// :
 	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
 	0,0,0,1,0,0,0,
-	0,0,0,0,0,0,0,
-	0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,
 	0,0,0,1,0,0,0,
 	0,0,0,0,0,0,0,
@@ -259,11 +255,11 @@ const unsigned char SimpleFont[] = {
 	// ;
 	0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
 	0,0,0,1,0,0,0,
 	0,0,0,0,0,0,0,
 	0,0,0,1,0,0,0,
 	0,0,0,1,0,0,0,
-	0,0,0,0,0,0,0,
 	
 	// <
 	0,0,0,0,0,0,0,
@@ -593,19 +589,289 @@ const unsigned char SimpleFont[] = {
 	0,0,0,0,0,0,0,
 	0,0,1,0,0,0,0,
 	0,0,0,1,0,0,0,
-	0,0,0,0,1,0,0,
 	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// a
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,1,0,0,0,
+	0,0,0,0,1,0,0,
+	0,0,1,1,1,0,0,
+	0,0,1,1,1,0,0,
+	0,0,0,0,0,0,0,
+	
+	// b
+	0,0,0,0,0,0,0,
+	0,1,0,0,0,0,0,
+	0,1,0,0,0,0,0,
+	0,1,1,1,0,0,0,
+	0,1,0,0,1,0,0,
+	0,1,1,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// c
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,1,1,0,0,
+	0,0,1,0,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,0,1,1,0,0,
+	0,0,0,0,0,0,0,
+	
+	// d
+	0,0,0,0,0,0,0,
+	0,0,0,0,1,0,0,
+	0,0,0,0,1,0,0,
+	0,0,1,1,1,0,0,
+	0,1,0,0,1,0,0,
+	0,0,1,1,1,0,0,
+	0,0,0,0,0,0,0,
+	
+	// e
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,1,0,0,0,
+	0,1,1,1,1,0,0,
+	0,1,0,0,0,0,0,
+	0,0,1,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// f
+	0,0,0,0,0,0,0,
+	0,0,0,0,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,1,1,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// g
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,1,0,0,0,
+	0,1,0,0,1,0,0,
+	0,0,1,1,1,0,0,
+	0,0,0,0,1,0,0,
+	0,0,1,1,0,0,0,
+	
+	// h
+	0,0,0,0,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,1,1,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,0,0,0,0,0,
+	
+	// i
+	0,0,0,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// j
+	0,0,0,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,1,0,0,0,0,
+	
+	// k
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,1,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,0,0,0,0,0,
+	
+	// l
+	0,0,0,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// m
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,1,1,0,1,0,0,
+	0,1,0,1,0,1,0,
+	0,1,0,1,0,1,0,
+	0,1,0,1,0,1,0,
+	0,0,0,0,0,0,0,
+	
+	// n
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,1,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,0,0,0,0,0,
+	
+	// o
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// p
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,1,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,1,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,1,0,0,0,0,
+	
+	// q
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,1,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,0,1,1,0,0,
+	0,0,0,0,1,0,0,
+	0,0,0,0,1,0,0,
+	
+	// r
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,1,1,0,0,
+	0,0,1,0,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// s
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,1,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// t
+	0,0,0,0,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,1,1,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,1,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// u
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,1,1,0,0,
+	0,0,0,0,0,0,0,
+	
+	// v
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// w
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,1,0,1,0,1,0,
+	0,1,0,1,0,1,0,
+	0,1,0,1,0,1,0,
+	0,0,1,0,1,0,0,
+	0,0,0,0,0,0,0,	
+	
+	// x
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,0,0,0,0,0,
+	
+	// y
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,0,1,0,0,
+	0,0,1,0,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	
+	// z
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,1,1,1,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,1,0,0,0,0,
+	0,1,1,1,1,0,0,
+	0,0,0,0,0,0,0,
+	
+	// {
+	0,0,0,0,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,1,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,1,0,0,
+	
+	// |
+	0,0,0,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,0,0,0,
+	
+	// }
+	0,0,1,0,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,0,1,0,0,
+	0,0,0,1,0,0,0,
+	0,0,0,1,0,0,0,
+	0,0,1,0,0,0,0,
+	
+	// ~
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,0,0,0,0,0,
+	0,0,1,1,0,0,1,
+	0,1,0,0,1,1,0,
 	0,0,0,0,0,0,0,
 	0,0,0,0,0,0,0,
 };
 
-void DrawPoint(Image* output, const uvec2& position, const Vector4ub& color, const unsigned int size = 1) {
+static void DrawPoint(Image* output, const uvec2& position, const Vector4ub& color, const unsigned int size = 1) {
 	if (size == 1) {
-		output->setRawPixel(position.x, position.y, color);
+		output->setPixel(position.x, position.y, color);
 	} else {
 		for (unsigned int x = 0; x < size; ++x) {
 			for (unsigned int y = 0; y < size; ++y) {
-				output->setRawPixel(position.x + x, position.y + y, color);
+				output->setPixel(position.x + x, position.y + y, color);
 			}
 		}
 	}
@@ -616,7 +882,7 @@ inline uvec2 GetTextSize(const char* text, unsigned int size = 1) {
 }
 
 inline bool IsPrintable(const char c) {
-	return ((c >= ' ') && (c <= '`'));
+	return ((c >= ' ') && (c <= '~'));
 }
 
 inline bool IsLower(const char c) {
@@ -629,26 +895,63 @@ void DrawText(Image *output, const uvec2& position, const char *text, const Vect
 
 	for (unsigned int index = 0; index < length; ++index) {
 		unsigned int charOffset  = 0;
-		char c = text[index];
+		const char c = text[index];
 
-		c = ToUpper(c);
-		
-		if (IsPrintable(c) == false) {
-			continue;
-		}
-		
-		charOffset = (c - ' ') * 49;
-		for (unsigned int x = 0; x < 7; ++x) {
-			for (unsigned int y = 0; y < 7; ++y) {
-				unsigned int pixel = SimpleFont[charOffset + y * 7 + x];
-				if (pixel == 0) {
-					continue;
+		if (IsPrintable(c)) {
+			charOffset = (c - ' ') * 49;
+			for (unsigned int x = 0; x < 7; ++x) {
+				for (unsigned int y = 0; y < 7; ++y) {
+					unsigned int pixel = SimpleFont[charOffset + y * 7 + x];
+					if (pixel == 0) {
+						continue;
+					}
+					DrawPoint(output, uvec2(position.x + x * size + offset, position.y + y * size), color, size);
 				}
-				DrawPoint(output, uvec2(position.x + x * size + offset, position.y + y * size), color, size);
 			}
 		}
 		offset += 7 * size;
 	}
+}
+
+void DrawText(Image *output, const uvec2& position, const char *text, int length, const Vector4ub color = Vector4ub(), const unsigned int size = 1) {
+	unsigned int offset = 0;
+
+	for (unsigned int index = 0; index < length; ++index) {
+		unsigned int charOffset  = 0;
+		const char c = text[index];
+		
+		if (IsPrintable(c)) {
+			charOffset = (c - ' ') * 49;
+			for (unsigned int x = 0; x < 7; ++x) {
+				for (unsigned int y = 0; y < 7; ++y) {
+					unsigned int pixel = SimpleFont[charOffset + y * 7 + x];
+					if (pixel == 0) {
+						continue;
+					}
+					DrawPoint(output, uvec2(position.x + x * size + offset, position.y + y * size), color, size);
+				}
+			}
+		}
+		offset += 7 * size;
+	}
+}
+
+static void DrawCenteredText(Image *output, const ivec4& rect, const char *text, const Vector4ub color = Vector4ub(), const unsigned int size = 1) {
+	const unsigned int length = strlen(text);
+	const unsigned int width = (rect.z - rect.x);
+	const unsigned int height = (rect.w - rect.y);
+	if (height < 7 * size) {
+		return;
+	}
+
+	const int k = width / (7 * size);
+	const unsigned int characterCount = length < k ? length : k;	
+	
+	unsigned int offsetX = width / 2 - (characterCount * 7 * size) / 2;
+	unsigned int offsetY = height / 2 - (1 * 7 * size) / 2;
+
+
+	DrawText(output, uvec2(rect.x + offsetX, rect.y + offsetY), text, characterCount, color, size);
 }
 
 void DrawText(Image *output, const uvec2& position, const Vector4ub color, const unsigned int size, const char *format ...) {
@@ -663,4 +966,43 @@ void DrawText(Image *output, const uvec2& position, const Vector4ub color, const
     va_end(args);
 }
 
-#endif // __SIMPLE_FONT_H__
+
+inline void DrawCharacter(Image* output, char c, const ivec2& position = ivec2(), const ubvec4& color = ubvec4(), uint32_t size = 1) {
+	if (IsPrintable(c) == false) {
+		return;
+	}
+	
+	const uint32_t tokenIndex = c - ' ';
+	const uint32_t offset = tokenIndex * 49;
+	
+	for (uint32_t y = 0; y < 7; ++y) {
+		for (uint32_t x = 0; x < 7; ++x) {
+			const uint32_t pixelIndex = y * 7 + x;
+			const uint32_t pixel = SimpleFont[offset + pixelIndex];
+			if (pixel) {
+				DrawPoint(output, uvec2(position.x + x * size, position.y + y * size), color, size);
+			}
+		}
+	}
+}
+
+static void DrawText(Image *output, const ivec4& bounds, const char *text, const ubvec4& color = Vector4ub(), uint32_t size = 1, uint32_t flags = 0) {
+	const int step = 7 * size;
+	ivec2 position(bounds.x, bounds.y);
+	while (*text != '\0') {
+		switch (*text) {
+		case '\n' :
+			position.x = bounds.x;
+			position.y += step;
+			break;
+		default :
+			if ((position.x <= bounds.z - step) && (position.y <= bounds.w - step)) {
+				DrawCharacter(output, *text, position, color, size);
+			}
+			position.x += step;
+		}
+		++text;
+	}
+}
+
+#endif // __FONT_H__

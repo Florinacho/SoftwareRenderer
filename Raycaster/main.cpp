@@ -511,7 +511,7 @@ void RenderScene(Image* output, const Camera* camera, uvec4 viewport = uvec4()) 
 
 		for (y = 0; y < lineHeight; ++y) {
 			float c = Textures[(int)ty * 32 + (int)tx] * shade;
-			output->setRawPixel(rayIndex, y + lineOffset, Vector4ub(c * 255.0f, c * 255.0f, c * 255.0f, 255));
+			output->setPixel(rayIndex, y + lineOffset, Vector4ub(c * 255.0f, c * 255.0f, c * 255.0f, 255));
 			ty += ty_step;
 		}
 
@@ -524,12 +524,12 @@ void RenderScene(Image* output, const Camera* camera, uvec4 viewport = uvec4()) 
 			// Draw floors
 			mapIndex = mapF[(int)(ty / 32.0f) * MapSize.x + (int)(tx / 32.0f)] * 32 * 32;
 			float c = Textures[((int)(ty) & 31) * 32 + ((int)(tx) & 31) + mapIndex] * 0.7;
-			output->setRawPixel(rayIndex, y, Vector4ub(c * 200.0f, c * 200.0f, c * 255.0f, 255));
+			output->setPixel(rayIndex, y, Vector4ub(c * 200.0f, c * 200.0f, c * 255.0f, 255));
 
 			// Draw ceiling
 			mapIndex = mapC[(int)(ty / 32.0f) * MapSize.x + (int)(tx / 32.0f)] * 32 * 32;
 			c = Textures[((int)(ty) & 31) * 32 + ((int)(tx) & 31) + mapIndex] * 0.7f;
-			output->setRawPixel(rayIndex, outputSize.y - y, Vector4ub(c * 128.0f, c * 255.0f, c * 128.0f, 255));
+			output->setPixel(rayIndex, outputSize.y - y, Vector4ub(c * 128.0f, c * 255.0f, c * 128.0f, 255));
 		}
 
 		// Advance next ray angle
@@ -647,7 +647,7 @@ int main(int argc, char* argv[]) {
 		unsigned int mapIndex = (int)(target.y / 64.0f) * MapSize.x + (int)(target.x / 64.0f);
 		switch (mapW[mapIndex]) {
 		case 4 :
-			colorBuffer.drawFilledRectangle(vec4(messagePosition.x, messagePosition.y, messagePosition.x + textSize.x, messagePosition.y + textSize.y), vec4(0.0f, 1.0f, 0.0f, 1.0f));
+			colorBuffer.drawFilledRectangle(ivec4(messagePosition.x, messagePosition.y, messagePosition.x + textSize.x, messagePosition.y + textSize.y), ubvec4(0, 255, 0, 255));
 			DrawText(&colorBuffer, messagePosition, text, Vector4ub(0, 0, 255, 255), size);
 			break;
 		}

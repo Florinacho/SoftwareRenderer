@@ -14,7 +14,7 @@
 #endif
 
 #include "Timer.h" 
- 
+
 class Camera {
 public:
 	vec3 position;
@@ -37,48 +37,47 @@ public:
 		setFieldOfView(fov);
 		setSpeed(speed);
 	}
-	
+
 	void setPosition(const vec3 &value) {
 		position = value;
 	}
-	
+
 	const vec3 &getPosition() const {
 		return position;
 	}
-	
+
 	void setRotation(const vec3 &value) {
 		rotation = value;
 	}
-	
+
 	const vec3 &getRotation() const {
 		return rotation;
 	}
-	
+
 	void setAspectRatio(const float value) {
 		aspectRatio = value;
 	}
-	
+
 	float getAspectRation() const {
 		return aspectRatio;
 	}
-	
+
 	void setFieldOfView(const float value) {
 		fieldOfView = value;
 	}
-	
+
 	float getFieldOfView() const {
 		return fieldOfView;
 	}
-	
+
 	void setSpeed(const float value) {
 		speed = value;
 	}
-	
+
 	float getSpeed() const {
 		return speed;
 	}
-	
-	
+
 	bool onEvent(const Event& event) {
 		switch (event.type) {
 		case Event::KEYBOARD :
@@ -101,7 +100,7 @@ public:
 	
 		return false;
 	}
-	
+
 	void update(float deltaTime) {
 		static const float DEG2RAD = M_PI / 180.0f;
 		const float snX = sinf(rotation.y * DEG2RAD);
@@ -125,7 +124,7 @@ public:
 		}
 	}
 };
- 
+
 struct Sphere { 
     vec3 center;                           /// position of the sphere 
     float radius, radius2;                  /// sphere radius and radius^2 
@@ -134,7 +133,7 @@ struct Sphere {
     Sphere(const vec3 &c, const float &r, const vec3 &sc, const float &refl = 0, const float &transp = 0, const vec3 &ec = 0) 
 		: center(c), radius(r), radius2(r * r), surfaceColor(sc), emissionColor(ec),  transparency(transp), reflection(refl) 
     { } 
-	
+
     bool intersect(const vec3 &rayorig, const vec3 &raydir, float &t0, float &t1) const  { 
         const vec3 l = center - rayorig; 
         const float tca = l.dot(raydir); 
@@ -158,8 +157,7 @@ constexpr float kEpsilon = 1e-8;
 bool rayTriangleIntersect( 
 	const vec3 &orig, const vec3 &dir, 
     const vec3 &v0, const vec3 &v1, const vec3 &v2, 
-    float &t, float &u, float &v) 
-{ 
+    float &t, float &u, float &v) { 
     vec3 v0v1 = v1 - v0; 
     vec3 v0v2 = v2 - v0; 
     vec3 pvec = dir.cross(v0v2); 
@@ -170,19 +168,19 @@ bool rayTriangleIntersect(
 	}
 
     float invDet = 1 / det; 
- 
+
     vec3 tvec = orig - v0; 
     u = tvec.dot(pvec) * invDet; 
     if (u < 0 || u > 1) {
 		return false; 
 	}
- 
+
     vec3 qvec = tvec.cross(v0v1); 
     v = dir.dot(qvec) * invDet; 
     if (v < 0 || u + v > 1) {
 		return false; 
 	}
- 
+
     t = v0v2.dot(qvec) * invDet; 
      return true;
 } 
@@ -197,7 +195,7 @@ vec3 trace(const vec3 &rayorig, const vec3 &raydir, const std::vector<Sphere> &s
     //if (raydir.length() != 1) std::cerr << "Error " << raydir << std::endl;
     float tnear = INFINITY; 
     const Sphere* sphere = NULL; 
-	
+
     // find intersection of this ray with the sphere in the scene
     for (unsigned i = 0; i < spheres.size(); ++i) { 
         float t0 = INFINITY, t1 = INFINITY; 
@@ -205,19 +203,19 @@ vec3 trace(const vec3 &rayorig, const vec3 &raydir, const std::vector<Sphere> &s
             if (t0 < 0) {
 				t0 = t1; 
 			}
-			
+
             if (t0 < tnear) { 
                 tnear = t0; 
                 sphere = &spheres[i]; 
             } 
         } 
     } 
-	
+
     // if there's no intersection return black or background color
     if (!sphere) {
 		return vec3(1.0f); 
 	}
-	
+
     vec3 surfaceColor = 0.0f; // color of the ray/surfaceof the object intersected by the ray 
     vec3 phit = rayorig + raydir * tnear; // point of intersection 
     vec3 nhit = phit - sphere->center; // normal at the intersection point 
@@ -232,7 +230,7 @@ vec3 trace(const vec3 &rayorig, const vec3 &raydir, const std::vector<Sphere> &s
 		nhit = -nhit;
 		inside = true; 
 	}
-	
+
     if ((sphere->transparency > 0.0f || sphere->reflection > 0.0f) && depth < MAX_RAY_DEPTH) { 
         float facingratio = -raydir.dot(nhit); 
         // change the mix value to tweak the effect
@@ -243,7 +241,7 @@ vec3 trace(const vec3 &rayorig, const vec3 &raydir, const std::vector<Sphere> &s
         refldir.normalize(); 
         vec3 reflection = trace(phit + nhit * bias, refldir, spheres, depth + 1); 
         vec3 refraction;
-		
+
         // if the sphere is also transparent compute refraction ray (transmission)
         if (sphere->transparency) { 
             float ior = 1.1f;
@@ -278,7 +276,7 @@ vec3 trace(const vec3 &rayorig, const vec3 &raydir, const std::vector<Sphere> &s
             } 
         } 
     } 
- 
+
     return surfaceColor + sphere->emissionColor; 
 } 
 
@@ -286,8 +284,7 @@ bool RayIntersectsTriangle(const vec3 &rayOrigin,
                            const vec3 &rayVector, 
                            const vec3* triangle,
                            vec3& outIntersectionPoint,
-						   vec3& bcc)
-{
+						   vec3& bcc) {
     const float EPSILON = 0.0000001;
     vec3 edge1, edge2, h, s, q;
     float a,f,u,v;
@@ -322,8 +319,7 @@ bool RayIntersectsTriangle(const vec3 &rayOrigin,
 	return false;
 }
 
-int main(int argc, char **argv) 
-{ 
+int main(int argc, char **argv) {
 	/*************************************************************************/
 	/* Output                                                                */
 	/*************************************************************************/
@@ -346,7 +342,7 @@ int main(int argc, char **argv)
 	colorBuffer.create(output.getSize(), output.getPixelFormat());
 	colorBuffer.wrapping.x = Image::EWT_DISCARD;
 	colorBuffer.wrapping.y = Image::EWT_DISCARD;
-	
+
     std::vector<Sphere> spheres; 
     // position, radius, surface color, reflectivity, transparency, emission color
     spheres.push_back(Sphere(vec3( 0.0f, -10004, -20.0f), 10000.0f, vec3(0.2f, 0.2f, 0.2f), 0.0f, 0.0f)); 
@@ -361,7 +357,7 @@ int main(int argc, char **argv)
 	/* Camera                                                                */
 	/*************************************************************************/
 	Camera camera;
- 
+
 	/*************************************************************************/
 	/* Main loop                                                             */
 	/*************************************************************************/
@@ -390,12 +386,10 @@ int main(int argc, char **argv)
 							running = false;
 							break;
 						case KEY_2 :
-							++MAX_RAY_DEPTH;
-							if (MAX_RAY_DEPTH > 5) MAX_RAY_DEPTH = 5;
+							if (++MAX_RAY_DEPTH > 5) MAX_RAY_DEPTH = 5;
 							break;
 						case KEY_1 :
-							--MAX_RAY_DEPTH;
-							if (MAX_RAY_DEPTH < 0) MAX_RAY_DEPTH = 0;
+							if (--MAX_RAY_DEPTH < 0) MAX_RAY_DEPTH = 0;
 							break;
 						case KEY_3 :
 							spheres[1].transparency -= 0.1f;
@@ -424,7 +418,7 @@ int main(int argc, char **argv)
 		}		
 
 		camera.update(1.0f);
-		
+
 		// Trace rays
 		for (unsigned y = 0; y < ScreenSize.y; ++y) { 
 			for (unsigned x = 0; x < ScreenSize.x; ++x) { 
@@ -434,7 +428,7 @@ int main(int argc, char **argv)
 				rayDirection.z = -1.0f;
 				rayDirection.rotateXZBy(camera.rotation.y);
 				rayDirection.normalize(); 
-				
+
 				vec3 pixel = trace(camera.position, rayDirection, spheres, 0); 
 
 				if (pixel.x > 1.0f) {
@@ -446,13 +440,13 @@ int main(int argc, char **argv)
 				if (pixel.z > 1.0f) {
 					pixel.z = 1.0f;
 				}
-			
-				colorBuffer.setPixel(x, y, vec4(pixel, 1.0f));
-			} 
+
+				colorBuffer.setPixelf(x, y, vec4(pixel, 1.0f));
+			}
 		}
 		// Blit the final image to the output
 		output.blit(&colorBuffer);
 	}
- 
+
     return 0; 
 } 

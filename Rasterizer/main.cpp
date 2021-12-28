@@ -70,6 +70,9 @@ int main() {
 	depthBuffer.wrapping.x = Image::EWT_DISCARD;
 	depthBuffer.wrapping.y = Image::EWT_DISCARD;
 	
+	depthBuffer.setPixelf(10, 10, vec4(0.5f));
+	printf("Pixel 10x10: %f\n", depthBuffer.getPixelf(10, 10).x);
+	
 	renderTarget.setBuffer(RenderTarget::ERT_COLOR_0, &colorBuffer);
 	renderTarget.setBuffer(RenderTarget::ERT_DEPTH, &depthBuffer);
 

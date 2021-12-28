@@ -38,7 +38,7 @@ void Renderer::drawLine(const vec3& begin, const vec4& beginColor, const vec3& e
 	const uvec2 size = colorBufferPtr->getSize();
 
 	if(xdiff == 0.0f && ydiff == 0.0f) {
-		colorBufferPtr->setPixel(vertex[0].position.x, vertex[0].position.y, beginColor);
+		colorBufferPtr->setPixelf(vertex[0].position.x, vertex[0].position.y, beginColor);
 		return;
 	}
 
@@ -69,14 +69,14 @@ void Renderer::drawLine(const vec3& begin, const vec4& beginColor, const vec3& e
 				continue;
 			}
 
-			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixel(x, invY).x) {
+			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixelf(x, invY).x) {
 				continue;
 			}
 
-			colorBufferPtr->setPixel(x, invY, color);
+			colorBufferPtr->setPixelf(x, invY, color);
 
 			if (renderFlags[ERF_DEPTH_MASK]) {
-				depthBufferPtr->setPixel(x, invY, vec4(depth, depth, depth, 1.0f));
+				depthBufferPtr->setPixelf(x, invY, vec4(depth, depth, depth, 1.0f));
 			}
 		}
 	} else {
@@ -103,14 +103,14 @@ void Renderer::drawLine(const vec3& begin, const vec4& beginColor, const vec3& e
 				continue;
 			}
 
-			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixel(x, invY).x) {
+			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixelf(x, invY).x) {
 				continue;
 			}
 
-			colorBufferPtr->setPixel(x, invY, color);
+			colorBufferPtr->setPixelf(x, invY, color);
 
 			if (renderFlags[ERF_DEPTH_MASK]) {
-				depthBufferPtr->setPixel(x, invY, vec4(depth, depth, depth, 1.0f));
+				depthBufferPtr->setPixelf(x, invY, vec4(depth, depth, depth, 1.0f));
 			}
 		}
 	}
@@ -243,7 +243,7 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 				continue;
 			}
 
-			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixel(i, invJ).x) {
+			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixelf(i, invJ).x) {
 				continue;
 			}
 			
@@ -289,14 +289,14 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 			activeShader->pixelShader(pixelShaderData);
 
 			if (renderFlags[ERF_ALPHA_BLEND]) {
-				const vec4 pixel = colorBufferPtr->getPixel(i, invJ);
+				const vec4 pixel = colorBufferPtr->getPixelf(i, invJ);
 				const float inv = 1.0f - pixelShaderData.color.w;
 				pixelShaderData.color = pixelShaderData.color * pixelShaderData.color.w + pixel * inv;
 			}
-			colorBufferPtr->setPixel(i, invJ, pixelShaderData.color);
+			colorBufferPtr->setPixelf(i, invJ, pixelShaderData.color);
 
 			if (renderFlags[ERF_DEPTH_MASK]) {
-				depthBufferPtr->setPixel(i, invJ, vec4(depth, depth, depth, 1.0f));
+				depthBufferPtr->setPixelf(i, invJ, vec4(depth, depth, depth, 1.0f));
 			}
 		}
 	} 

@@ -138,6 +138,14 @@ struct Vector2 {
 		T dot(const Vector2<T>& other) const {
 			return data[A] * other.data[A] + data[B] * other.data[B];
 		}
+		
+		double length() const {
+			return data[A] * data[A] + data[B] * data[B];
+		}
+		
+		double magnitude() const {
+			return sqrt(length());
+		}
 	}; // Swizzle
 	
 	typedef Swizzle<0, 0> XX;
@@ -285,6 +293,14 @@ struct Vector2 {
 	
 	T getDistanceFrom(const Vector2<T>& other) const {
 		return sqrt((other.x - x) * (other.x - x) + (other.y - y) * (other.y - y));
+	}
+	
+	double length() const {
+		return x * x + y * y;
+	}
+	
+	double magnitude() const {
+		return sqrt(length());
 	}
 }; // Vector2
 

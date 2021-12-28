@@ -1,21 +1,29 @@
 #ifndef __IMAGE_H__
 #define __IMAGE_H__
 
+#include <stdlib.h>
+#include <stdio.h>
+#include <stdint.h>
 #include "Vector.h"
 
 class Image {
 protected:
+	uint8_t* colorMapData;
+	uint32_t colorMapLength;
 	union {
-		unsigned char* data;
+		uint8_t* data;
 		float* fdata;
 	};
+	uint8_t pixelFormat;
 	Vector2u size;
-	int pixelFormat;
-
 
 	// Make the copy operation illegal
 	Image(const Image& other){}
 	Image& operator = (const Image& other) {return *this;}
+	
+	bool readColorMapData(uint8_t* colorMap, uint32_t depth, uint32_t length, FILE* file);
+	bool readUncompressedPixelData(uint8_t* pixels, uint32_t depth, uint32_t width, uint32_t height, FILE* file);
+	bool readCompressedPixelData(uint8_t* pixels, uint32_t depth, uint32_t width, uint32_t height, FILE* file);
 	
 public:
 	/*************************************************************************/
@@ -26,17 +34,26 @@ public:
 	
 	Vector2ub wrapping;
 	
-	enum PixelFormat {
-		EPF_L8,		// 8,  Luminance
-		EPF_R5G6B5,	// 16, 
-		EPF_R8G8B8,	// 24, Red + Green + Blue
-		EPF_R8G8B8A8,	// 32, Red + Green + Blue + Alpha
-
+	enum PIXEL_FORMAT {
+		EPF_NONE,
+		
+		EPF_INDEX_RGB,
+		EPF_INDEX_RGBA,
+		// EPF_A1R5G5B5,
+		EPF_R8G8B8,
+		EPF_R8G8B8A8,
+		EPF_GRAYSCALE,
+		EPF_GRAYSCALE_ALPHA,
+		
 		EPF_DEPTH,
 	};
-	
-	enum WrappingType {
-		EWT_REPEAT,	// Default
+	enum COLORMAP_TYPE {
+		ECT_NONE,
+		ECT_R8G8B8,
+		ECT_R8G8B8A8
+	};	
+	enum WRAPPING_TYPE {
+		EWT_REPEAT,	  // Default
 		EWT_MIRROR,
 		EWT_CLAMP,
 		EWT_DISCARD
@@ -46,23 +63,23 @@ public:
 
 	virtual ~Image();
 	
-	void create(const Vector2u& size, int pixelFormat);
+	void create(const Vector2u& size, PIXEL_FORMAT pixelFormat);
 	
-	const unsigned char* getData() const;
+	const uint8_t* getData() const;
 
-	virtual unsigned int getDataLength() const;
+	virtual uint32_t getDataLength() const;
 
 	Vector2u getSize() const;
 	
-	virtual unsigned int getLineStride() const;
+	virtual uint32_t getLineStride() const;
 
-	Image::PixelFormat getPixelFormat() const;
+	Image::PIXEL_FORMAT getPixelFormat() const;
 
-	unsigned int getPixelSize() const;
+	uint32_t getPixelSize() const;
 
 	bool hasAlpha() const;
 
-	bool load(const char* filename);
+	bool load(const char* filename, bool convertToTruecolor = true);
 
 	void flipVertical();
 
@@ -71,34 +88,28 @@ public:
 	void clear();
 
 	void destroy();
-	
-	virtual void setPixel(const int x, const int y, const Vector4f& value);
-	
-	virtual Vector4f getPixel(int x, int y) const;
-	
-	virtual Vector4f getPixel(const Vector2u& uv) const;
 
-	Vector4f sample2D(const Vector2f& uv) const;
+	virtual void setPixel(int x, int y, const ubvec4& color);
 	
-	virtual void setRawPixel(const int x, const int y, const Vector4ub& value);
+	virtual const ubvec4 getPixel(int x, int y) const;
 	
-	virtual Vector4ub getRawPixel(int x, int y) const;
+	virtual void setPixelf(int x, int y, const vec4& color);
 	
-	Vector4ub sampleRaw2D(const Vector2f& uv) const;
-
-	void generateTestPattern(const Vector2u& size, int pixelFormat);
+	virtual vec4 getPixelf(int x, int y) const;
 	
-	void drawLine(const Vector2f& begin, const Vector4f& beginColor, const Vector2f& end, const Vector4f& endColor);
+	virtual vec4 sample2D(const vec2& uv) const;
 	
-	void drawLine(const Vector2f& begin, const Vector2f& end, const Vector4f& color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual void drawLine(const ivec2& begin, const ubvec4& beginColor, const ivec2& end, const ubvec4& endColor);
 	
-	void drawRectangle(const Vector4f& rectangle, const Vector4f& color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual void drawLine(const ivec2& begin, const ivec2& end, const ubvec4& color);
 	
-	void drawFilledRectangle(const Vector4f& rectangle, const Vector4f& color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual void drawRectangle(const ivec4& bounds, const ubvec4& color);
 	
-	void drawCircle(const Vector2f& center, float radius, const Vector4f& color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual void drawFilledRectangle(const ivec4& bounds, const ubvec4& color);
 	
-	void drawFilledCircle(const Vector2f& center, float radius, const Vector4f& color = Vector4f(1.0f, 1.0f, 1.0f, 1.0f));
+	virtual void drawCircle(const ivec2& center, int radius, const ubvec4& color);
+	
+	virtual void drawFilledCircle(const ivec2& center, int radius, const ubvec4& color);
 	
 	void blit(const Image* image, const uvec2& position);
 };
