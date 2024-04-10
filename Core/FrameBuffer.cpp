@@ -69,9 +69,9 @@ int FrameBuffer::initialize(const char* filename, const Vector2u& nsize, int npi
 	varInfo.yres_virtual = varInfo.yres;
 
 	switch (npixelFormat) {
-	case EPF_R5G6B5 :
-		varInfo.bits_per_pixel = 16;
-		break;
+	// case EPF_R5G6B5 :
+	// 	varInfo.bits_per_pixel = 16;
+	// 	break;
 	case EPF_R8G8B8 :
 		varInfo.bits_per_pixel = 24;
 		break;

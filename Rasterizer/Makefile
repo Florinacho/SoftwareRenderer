@@ -1,12 +1,13 @@
 OUTPUT=main.exe
 
-CC=mingw32-g++.exe
+#CC=mingw32-g++.exe
+CC=g++
 
 C_FLAGS=-O3 -msse3 -ffast-math -march=native
 #C_FLAGS=-g3
 L_FILES=-O3
 
-LIBS=-lm -pthread -lgdi32
+LIBS=-lm -lwayland-client #-lgdi32 #-pthread
 
 CORE_SOURCE=../Core
 C_FLAGS+=-I$(CORE_SOURCE)
@@ -15,6 +16,8 @@ SOURCE_FILES=\
 			$(CORE_SOURCE)/Image.cpp \
 			$(CORE_SOURCE)/FrameBuffer.cpp \
 			$(CORE_SOURCE)/Window.cpp \
+			$(CORE_SOURCE)/wl_window.cpp \
+			$(CORE_SOURCE)/WLWindow.cpp \
 			$(CORE_SOURCE)/Timer.cpp \
 			$(CORE_SOURCE)/Input.cpp \
 			RenderTarget.cpp \

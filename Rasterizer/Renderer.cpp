@@ -30,7 +30,7 @@ void Renderer::drawLine(const vec3& begin, const vec4& beginColor, const vec3& e
 			vertex[index].position = viewportTransformation * vertex[index].position;
 		}
 	}
-	
+
 	float xdiff = (vertex[1].position.x - vertex[0].position.x);
 	float ydiff = (vertex[1].position.y - vertex[0].position.y);
 	float zdiff = (vertex[1].position.z - vertex[0].position.z);
@@ -52,7 +52,7 @@ void Renderer::drawLine(const vec3& begin, const vec4& beginColor, const vec3& e
 			xmin = vertex[1].position.x;
 			xmax = vertex[0].position.x;
 		}
-		
+
 		xmin = max(xmin, 0.0f);
 		xmax = min(xmax, (float)(size.x - 1));
 
@@ -118,7 +118,8 @@ void Renderer::drawLine(const vec3& begin, const vec4& beginColor, const vec3& e
 
 //https://www.scratchapixel.com/lessons/3d-basic-rendering/rasterization-practical-implementation/rasterization-stage
 inline float edgeFunction(const vec4& a, const vec4& b, const vec4& c) {
-	return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x); 
+	//return (c.x - a.x) * (b.y - a.y) - (c.y - a.y) * (b.x - a.x); 
+	return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
 }
 
 int min(int a, int b, int c, int d) {// printf("min(%d, %d, %d, %d)\n", a, b, c, d);
@@ -158,17 +159,17 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 	vertex[0].color = v0.color;
 	vertex[0].index = 0;
 
-	vertex[1].position = vec4(v1.position, 1.0f);
-	vertex[1].normal = vec4(v1.normal, 0.0f);
-	vertex[1].uv = v1.textureCoords;
-	vertex[1].color = v1.color;
-	vertex[1].index = 1;
+	vertex[2].position = vec4(v1.position, 1.0f);
+	vertex[2].normal = vec4(v1.normal, 0.0f);
+	vertex[2].uv = v1.textureCoords;
+	vertex[2].color = v1.color;
+	vertex[2].index = 1;
 
-	vertex[2].position = vec4(v2.position, 1.0f);
-	vertex[2].normal = vec4(v2.normal, 0.0f);
-	vertex[2].uv = v2.textureCoords;
-	vertex[2].color = v2.color;
-	vertex[2].index = 2;
+	vertex[1].position = vec4(v2.position, 1.0f);
+	vertex[1].normal = vec4(v2.normal, 0.0f);
+	vertex[1].uv = v2.textureCoords;
+	vertex[1].color = v2.color;
+	vertex[1].index = 2;
 
 	float vz[3];
 
@@ -177,7 +178,7 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 			if (activeShader->totalVaryingData != NULL) {
 				activeShader->varying = activeShader->totalVaryingData + index * activeShader->varyingCount;
 			}
-			// printf("1. position[%d] = %f\n", index, vertex[index].position.y);
+
 			activeShader->vertexShader(vertex[index]);
 
 			if (renderFlags[GFX_PERSPECTIVE_CORRECT]) {
@@ -186,120 +187,121 @@ void Renderer::drawTriangle(const Vertex& v0, const Vertex& v1, const Vertex& v2
 			}
 
 			// Normalize the display coordinates
-			// printf("2. position[%d] = %f\n", index, vertex[index].position.y);
 			vertex[index].position /= vertex[index].position.w;
 
 			// Scale the coordinates to the viewport size
-			// printf("3. position[%d] = %f\n", index, vertex[index].position.y);
 			vertex[index].position = viewportTransformation * vertex[index].position;
-			// printf("3. position[%d] = %f\n", index, vertex[index].position.y);
 		}
 	} 
-	
+
 	const float area = edgeFunction(vertex[0].position, vertex[1].position, vertex[2].position);
 
 	if (area <= 0.0f) {
 		return;
-	}	
+	}
 
 	const uvec2 size = colorBufferPtr->getSize();
-	// printf("4. position = %f, %f, %f\n", vertex[0].position.x, vertex[1].position.x, vertex[2].position.x);
-	 int minX = min(vertex[0].position.x, vertex[1].position.x, vertex[2].position.x, 0);if (minX < 0)minX = 0;
-	 int minY = min((int)vertex[0].position.y, (int)vertex[1].position.y, (int)vertex[2].position.y, 0);if (minY < 0)minY = 0;
+	int minX = min(vertex[0].position.x, vertex[1].position.x, vertex[2].position.x, 0);if (minX < 0)minX = 0;
+	int minY = min((int)vertex[0].position.y, (int)vertex[1].position.y, (int)vertex[2].position.y, 0);if (minY < 0)minY = 0;
 	const int maxX = max(vertex[0].position.x, vertex[1].position.x, vertex[2].position.x, (int)size.x - 1);
 	const int maxY = max(vertex[0].position.y, vertex[1].position.y, vertex[2].position.y, (int)size.y - 1);
-	
-	// printf("%d <= X <= %d\n", minX, maxX);
-	// printf("%d <= Y <= %d\n", minY, maxY);
 
-	for (int j = minY; j <= maxY; ++j) {
-		for (int i = minX; i <= maxX; ++i) {
-			int invJ = size.y - 1 - j;
-			const vec4 p((float)i + 0.5f, (float)j + 0.5f, 0.0f, 0.0f);
-			vec3 weight;
-			if ((weight.x = edgeFunction(vertex[1].position, vertex[2].position, p)) < 0.0f) {
-				continue;
-			}
-			if ((weight.y = edgeFunction(vertex[2].position, vertex[0].position, p)) < 0.0f) {
-				continue;
-			}
-			if ((weight.z = edgeFunction(vertex[0].position, vertex[1].position, p)) < 0.0f) {
-				continue;
-			}
-			weight /= area;
+	const vec4 p(minX + 0.5f, minY + 0.5f, 0.0f, 0.0f);
 
-			const float kdepth = (
-					vertex[0].position.z * weight.x + 
-					vertex[1].position.z * weight.y + 
-					vertex[2].position.z * weight.z);
-			const float depth = 1.0f - kdepth;
-			
-			float nz = 1.0f;
-			if (renderFlags[GFX_PERSPECTIVE_CORRECT]) {
-				nz = 1.0f / (weight.x * vz[0] + weight.y * vz[1] + weight.z * vz[2]);
-			}
+	vec3 deltaCol = {
+		vertex[1].position.y - vertex[2].position.y,
+		vertex[2].position.y - vertex[0].position.y,
+		vertex[0].position.y - vertex[1].position.y
+	};
+	vec3 deltaRow = {
+		vertex[2].position.x - vertex[1].position.x,
+		vertex[0].position.x - vertex[2].position.x,
+		vertex[1].position.x - vertex[0].position.x
+	};
+	vec3 row = {
+		edgeFunction(vertex[1].position, vertex[2].position, p),
+		edgeFunction(vertex[2].position, vertex[0].position, p),
+		edgeFunction(vertex[0].position, vertex[1].position, p)
+	};
 
-			if (depth < 0.0f || depth > 1.0f) {
-				continue;
-			}
+	for (int y = minY; y <= maxY; ++y) {
+		vec3 col = row;
 
-			if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixelf(i, invJ).x) {
-				continue;
-			}
-			
-			// Prepare for pixel shader
-			PixelShaderData pixelShaderData;
+		for (int x = minX; x <= maxX; ++x) {
 
-			for (unsigned int index = 0; index < MaxTextureCount; ++index) {
-				pixelShaderData.texture[index] = activeTexture[index];
-			}
+			bool isInside = ((col.x >= 0.0f) && (col.y >= 0.0f) && (col.z >= 0.0f));
+			if (isInside) {
+				int invY = size.y - 1 - y;
 
-			pixelShaderData.normal = 
-					vertex[0].normal * weight.x + 
-					vertex[1].normal * weight.y + 
-					vertex[2].normal * weight.z;				
+				// Normalize weight
+				vec3 weight = col / area;
 
-			pixelShaderData.uv = 
-					vertex[0].uv * weight.x + 
-					vertex[1].uv * weight.y + 
-					vertex[2].uv * weight.z;
-					
-			if (renderFlags[GFX_PERSPECTIVE_CORRECT]) {
-				pixelShaderData.uv *= nz;
-			}
-			
-			pixelShaderData.color = 
-					vertex[0].color * weight.x + 
-					vertex[1].color * weight.y + 
-					vertex[2].color * weight.z;
-
-			if (activeShader->totalVaryingData != NULL) {
-				const unsigned int vxc = 3;
-				const unsigned int vrc = activeShader->varyingCount;
-				
-				for (unsigned int index = 0; index < vrc; ++index) {
-					activeShader->totalVaryingData[vxc * vrc + index] = 
-						activeShader->totalVaryingData[0 * vrc + index] * weight.x + 
-						activeShader->totalVaryingData[1 * vrc + index] * weight.y + 
-						activeShader->totalVaryingData[2 * vrc + index] * weight.z;
+				float perspectiveFix = 1.0f;
+				if (renderFlags[GFX_PERSPECTIVE_CORRECT]) {
+					perspectiveFix = 1.0f / (weight.x * vz[0] + weight.y * vz[1] + weight.z * vz[2]);
 				}
-				activeShader->varying = activeShader->totalVaryingData + 3 * activeShader->varyingCount;
-			}
 
-			activeShader->pixelShader(pixelShaderData);
+				// Interpolate and invert depth
+				float depth = 1.0f;
+				for (uint32_t index = 0; index < 3; ++index) {
+					depth -= vertex[index].position.z * weight[index];
+				}
 
-			if (renderFlags[ERF_ALPHA_BLEND]) {
-				const vec4 pixel = colorBufferPtr->getPixelf(i, invJ);
-				const float inv = 1.0f - pixelShaderData.color.w;
-				pixelShaderData.color = pixelShaderData.color * pixelShaderData.color.w + pixel * inv;
-			}
-			colorBufferPtr->setPixelf(i, invJ, pixelShaderData.color);
+				if (depth < 0.0f || depth > 1.0f) {
+					goto LB_CONTINUE;
+				}
 
-			if (renderFlags[ERF_DEPTH_MASK]) {
-				depthBufferPtr->setPixelf(i, invJ, vec4(depth, depth, depth, 1.0f));
+				if (renderFlags[ERF_DEPTH_TEST] && depth < depthBufferPtr->getPixelf(x, invY).x) {
+					goto LB_CONTINUE;
+				}
+				
+				// Prepare for pixel shader
+				PixelShaderData pixelShaderData;
+
+				for (unsigned int index = 0; index < MaxTextureCount; ++index) {
+					pixelShaderData.texture[index] = activeTexture[index];
+				}
+
+				// Interpolate standard attributes
+				for (uint32_t index = 0; index < 3; ++ index) {
+					pixelShaderData.normal += vertex[index].normal * weight[index];
+					pixelShaderData.uv     += vertex[index].uv     * weight[index] * perspectiveFix;
+					pixelShaderData.color  += vertex[index].color  * weight[index];
+				}
+#if 0
+				// Interpolate user defined attributes
+				if (activeShader->totalVaryingData != NULL) {
+					const unsigned int vxc = 3;
+					const unsigned int vrc = activeShader->varyingCount;
+
+					for (unsigned int index = 0; index < vrc; ++index) {
+						activeShader->totalVaryingData[vxc * vrc + index] =
+							activeShader->totalVaryingData[0 * vrc + index] * weight.x +
+							activeShader->totalVaryingData[1 * vrc + index] * weight.y +
+							activeShader->totalVaryingData[2 * vrc + index] * weight.z;
+					}
+					activeShader->varying = activeShader->totalVaryingData + 3 * activeShader->varyingCount;
+				}
+#endif
+				activeShader->pixelShader(pixelShaderData);
+
+				if (renderFlags[ERF_ALPHA_BLEND]) {
+					const vec4 pixel = colorBufferPtr->getPixelf(x, invY);
+					const float inv = 1.0f - pixelShaderData.color.w;
+					pixelShaderData.color = pixelShaderData.color * pixelShaderData.color.w + pixel * inv;
+				}
+
+				colorBufferPtr->setPixelf(x, invY, pixelShaderData.color);
+
+				if (renderFlags[ERF_DEPTH_MASK]) {
+					depthBufferPtr->setPixelf(x, invY, vec4(depth, depth, depth, 1.0f));
+				}
 			}
+LB_CONTINUE:
+			col += deltaCol;
 		}
-	} 
+		row += deltaRow;
+	}
 }
 	
 Renderer::Renderer() {

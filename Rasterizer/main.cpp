@@ -1,10 +1,17 @@
 #include <stdio.h>
 
+#define OS_LINUX_WAYLAND
+
 #if defined (_WIN32)
 #include "Window.h"
 #elif defined (__linux__)
+#define OS_LINUX_WAYLAND
+#if defined(OS_LINUX_WAYLAND)
+#include "WLWindow.h"
+#else
 #include <linux/input.h>
 #include "FrameBuffer.h"
+#endif
 #else
 #error Unsupported platform!
 #endif
@@ -19,14 +26,14 @@ struct TestShader : public Shader {
 	TestShader() 
 		: Shader() {
 	}
-	
+
 	void vertexShader(VertexShaderData& vertex) {
 		if (uniform != NULL) {
 			const ShaderUniform* myUniform = reinterpret_cast<const ShaderUniform*>(uniform);
 			vertex.position = myUniform->modelViewProjectionMatrix * vertex.position;
 		}
 	}
-	
+
 	bool pixelShader(PixelShaderData& pixel) {
 		if (pixel.texture[0] != NULL) {
 			pixel.color *= pixel.texture[0]->sample2D(pixel.uv);
@@ -42,11 +49,18 @@ int main() {
 	const uvec2 ScreenSize(640, 480);
 #if defined (_WIN32)
 	Win32Window output;	
-	if (output.initialize(ScreenSize, Image::EPF_R8G8B8, "Software Renderer") == false) {
+	if (output.initialize(ScreenSize, Image::EPF_R8G8B8A8, "Software Renderer") == false) {
 		printf("Failed to initialize the win32 window.\n");
 		return 1;
 	}
 #elif defined (__linux__)
+#if defined(OS_LINUX_WAYLAND)
+	WLWindow output;
+	if (output.initialize(ScreenSize, Image::EPF_R8G8B8A8, "Software Renderer") == false) {
+		printf("Failed to initialize the wayland window.\n");
+		return 1;
+	}
+#else
 	FrameBuffer output;
 	if (output.initialize(NULL, ScreenSize, Image::EPF_R8G8B8A8) != 0) {
 		printf("Failed to initialize the frame buffer.\n");
@@ -54,7 +68,7 @@ int main() {
 	}
 	output.input.addAllInputs();
 #endif
-
+#endif
 	/*************************************************************************/
 	/* Renderer                                                              */
 	/*************************************************************************/
@@ -62,39 +76,32 @@ int main() {
 	RenderTarget renderTarget;
 	Image colorBuffer;
 	Image depthBuffer;
-	
+
 	colorBuffer.create(output.getSize(), output.getPixelFormat());
 	colorBuffer.wrapping.x = Image::EWT_DISCARD;
 	colorBuffer.wrapping.y = Image::EWT_DISCARD;
+	renderTarget.setBuffer(RenderTarget::ERT_COLOR_0, &colorBuffer);
+
 	depthBuffer.create(output.getSize(), Image::EPF_DEPTH);
 	depthBuffer.wrapping.x = Image::EWT_DISCARD;
 	depthBuffer.wrapping.y = Image::EWT_DISCARD;
-	
-	depthBuffer.setPixelf(10, 10, vec4(0.5f));
-	printf("Pixel 10x10: %f\n", depthBuffer.getPixelf(10, 10).x);
-	
-	renderTarget.setBuffer(RenderTarget::ERT_COLOR_0, &colorBuffer);
 	renderTarget.setBuffer(RenderTarget::ERT_DEPTH, &depthBuffer);
 
 	renderer.setRenderTarget(&renderTarget);
 	renderer.setViewport(vec4(0.0f, 0.0f, (float)ScreenSize.x, (float)ScreenSize.y));
-	
+
 	/*************************************************************************/
 	/* Camera                                                                */
 	/*************************************************************************/
-	const float FieldOfView = 60.0f;
-	const float AspectRatio = (float)ScreenSize.x / (float)ScreenSize.y;
-	const vec2 ViewDistance(0.1f, 100.0f);
-	
-	Camera camera(FieldOfView, AspectRatio, ViewDistance.x, ViewDistance.y);
+	Camera camera(60, (float)ScreenSize.x / (float)ScreenSize.y, 0.1f, 30.0f);
 	camera.position = vec3(0.0f, 50.0f, 30.0f);
 	camera.target = vec3(0.0f, 0.0f,-50.0f);
-	
+
 	/*************************************************************************/
 	/* Textures                                                              */
 	/*************************************************************************/
 	Image texture[3];
-	
+
 	if (texture[0].load("tex_test.tga") == false) {
 		printf("Failed to load texture0.\n");
 		return 2;
@@ -104,12 +111,12 @@ int main() {
 		printf("Failed to load texture1.\n");
 		return 3;
 	}
-	
+
 	if (texture[2].load("tex_suzanne.tga") == false) {
 		printf("Failed to load suzanne texture.\n");
 		return 3;
 	}
-	
+
 	/************************************************************************/
 	/* Shader                                                               */
 	/************************************************************************/
@@ -138,7 +145,7 @@ int main() {
 	cube.vertices = CubeVertices;
 	cube.vertexCount = CubeVerticesCount;
 	cube.shader = &shader;
-	
+
 	/*************************************************************************/
 	/* Billboard mesh                                                        */
 	/*************************************************************************/
@@ -160,7 +167,7 @@ int main() {
 	};
 	billboard.vertices = billboardVertices;
 	billboard.vertexCount = 6;
-	
+
 	Mesh suzanne;
 	suzanne.loadObj("suzanne.obj");
 	suzanne.camera = &camera;
@@ -168,7 +175,7 @@ int main() {
 	suzanne.scale = vec3(20.0f, 20.0f, 20.0f);
 	suzanne.texture = &texture[2];
 	suzanne.shader = &shader;
-	
+
 	/*************************************************************************/
 	/* Misc variables                                                        */
 	/*************************************************************************/
@@ -181,19 +188,17 @@ int main() {
 	unsigned int frameCount = 0;	
 	unsigned int totalFPS = 0;
 	unsigned int totalSeconds = 0;
-	
+
 	/*************************************************************************/
 	/* Main loop                                                             */
 	/*************************************************************************/
 	while (running) {
-
 		// Parse input events
 		while (output.getEvent(&event)) {
 			switch (event.type) {
 			case Event::WINDOW_CLOSE :
 				running = false;
 				break;
-
 			case Event::KEYBOARD :
 				if (event.state == 0) { // Key released
 					switch (event.key) {
@@ -238,7 +243,7 @@ int main() {
 				break;
 			}
 		}
-		
+
 		// Clear the old frame data
 		colorBuffer.clear();
 		depthBuffer.clear();
@@ -287,25 +292,25 @@ int main() {
 		if (drawObject[2]) {
 			billboard.draw(&renderer);
 		}
-		
+
 		// Blit the final image to the output
 		output.blit(&colorBuffer);
-		
+
 		// Calculate the FPS
 		++frameCount;
-		
+
 		const unsigned long long currentTime = Timer::GetMilliSeconds();
 		if ((currentTime - lastTime) >= 1000) {
 			char tmp[128];
-			
+
 			totalFPS += frameCount;
 			totalSeconds += 1;
-			
-			printf("Software Renderer FPS: %d | %.1f\n", frameCount, (float)totalFPS / (float)totalSeconds);
+
+			printf("FPS: %d | %.1f\n", frameCount, (float)totalFPS / (float)totalSeconds);
 			frameCount = 0;
 			lastTime += 1000;
 		}
 	}
-	
+
 	return 0;
 }

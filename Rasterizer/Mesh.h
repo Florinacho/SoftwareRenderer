@@ -167,7 +167,7 @@ struct Mesh {
 			}
 		}
 		
-		printf("Mesh::load(%s): Loaded %d vertices\n", filename, vertexBuffer.size());
+		printf("Mesh::load(%s): Loaded %lu vertices\n", filename, vertexBuffer.size());
 		
 		fclose(file);
 		
